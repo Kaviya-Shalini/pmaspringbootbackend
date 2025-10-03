@@ -47,6 +47,9 @@ public class MemoryService {
     // ** NEW METHOD TO SAVE MEMORY **
     public Addmemory createMemory(Addmemory memory, MultipartFile file, MultipartFile voiceNote) throws IOException {
         // Ensure the upload directory exists
+        User user = userRepository.findById(memory.getUserId()).orElseThrow(() ->
+                new ResourceNotFoundException("User not found with id: " + memory.getUserId()));
+        memory.setAlzheimer(user.isAlzheimer());
         Path uploadPath = Paths.get(uploadDir);
         if (!Files.exists(uploadPath)) {
             Files.createDirectories(uploadPath);

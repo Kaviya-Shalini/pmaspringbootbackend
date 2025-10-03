@@ -4,6 +4,7 @@ import com.example.personalmemory.model.Addmemory;
 import com.example.personalmemory.model.User;
 import com.example.personalmemory.service.MemoryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -47,39 +48,27 @@ public class Memorycontroller {
             @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "voiceNote", required = false) MultipartFile voiceNote,
-            @RequestParam(value = "reminderAt", required = false) String reminderAt,
+            @RequestParam(value = "reminderAt", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date reminderAt,
             @RequestParam("reminderDaily") boolean reminderDaily,
             @RequestParam(value = "medicationName", required = false) String medicationName,
             @RequestParam(value = "dosage", required = false) String dosage,
-            @RequestParam(value = "storageLocation", required = false) String storageLocation,
-            @RequestParam("isAlzheimer") boolean isAlzheimer
-    ) {
-        try {
-            Addmemory memory = new Addmemory();
-            memory.setUserId(userId);
-            memory.setTitle(title);
-            memory.setCategory(category);
-            memory.setCustomCategory(customCategory);
-            memory.setDescription(description);
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d, yyyy, hh:mm:ss a");
+            @RequestParam(value = "storageLocation", required = false) String storageLocation
+    ) throws IOException { // Let the method throw the exception
 
-            if (reminderAt != null && !reminderAt.isEmpty()) {
-                LocalDateTime ldt = LocalDateTime.parse(reminderAt, formatter);
-                memory.setReminderAt(Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant()));
-            }
-            memory.setReminderDaily(reminderDaily);
-            memory.setMedicationName(medicationName);
-            memory.setDosage(dosage);
-            memory.setStorageLocation(storageLocation);
-            memory.setAlzheimer(isAlzheimer);
+        Addmemory memory = new Addmemory();
+        memory.setUserId(userId);
+        memory.setTitle(title);
+        memory.setCategory(category);
+        memory.setCustomCategory(customCategory);
+        memory.setDescription(description);
+        memory.setReminderAt(reminderAt);
+        memory.setReminderDaily(reminderDaily);
+        memory.setMedicationName(medicationName);
+        memory.setDosage(dosage);
+        memory.setStorageLocation(storageLocation);
 
-            Addmemory savedMemory = memoryService.createMemory(memory, file, voiceNote);
+        Addmemory savedMemory = memoryService.createMemory(memory, file, voiceNote);
 
-            return ResponseEntity.ok(Map.of("success", true, "message", "Memory uploaded successfully!", "data", savedMemory));
-        } catch (IOException e) {
-            return ResponseEntity.status(500).body(Map.of("success", false, "message", "Failed to upload file."));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
-        }
+        return ResponseEntity.ok(Map.of("success", true, "message", "Memory uploaded successfully!", "data", savedMemory));
     }
 }
