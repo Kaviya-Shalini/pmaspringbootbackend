@@ -2,22 +2,22 @@ package com.example.personalmemory.controller;
 
 import com.example.personalmemory.model.Addmemory;
 import com.example.personalmemory.model.User;
-import com.example.personalmemory.repository.UserRepository;
 import com.example.personalmemory.service.MemoryService;
-import com.example.personalmemory.repository.MemoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
+import java.util.Date;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
 public class Memorycontroller {
-    // Save/update Alzheimer status
+
     @Autowired
     private MemoryService memoryService;
+
     @PostMapping("/patient-status")
     public ResponseEntity<?> savePatientStatus(@RequestBody Map<String, Object> body) {
         String userId = (String) body.getOrDefault("userId", "user-unknown");
@@ -27,11 +27,52 @@ public class Memorycontroller {
         return ResponseEntity.ok(Map.of("success", true, "message", "Patient status saved", "data", saved));
     }
 
-    // Get Alzheimer status
     @GetMapping("/patient-status/{userId}")
     public ResponseEntity<?> getPatientStatus(@PathVariable String userId) {
         Boolean status = memoryService.getPatientStatus(userId);
         return ResponseEntity.ok(Map.of("success", true, "userId", userId, "isAlzheimer", status));
     }
 
+    // ** NEW ENDPOINT TO ADD MEMORIES **
+    @PostMapping("/memories")
+    public ResponseEntity<?> createMemory(
+            @RequestParam("userId") String userId,
+            @RequestParam("title") String title,
+            @RequestParam("category") String category,
+            @RequestParam(value = "customCategory", required = false) String customCategory,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "voiceNote", required = false) MultipartFile voiceNote,
+            @RequestParam(value = "reminderAt", required = false) String reminderAt,
+            @RequestParam("reminderDaily") boolean reminderDaily,
+            @RequestParam(value = "medicationName", required = false) String medicationName,
+            @RequestParam(value = "dosage", required = false) String dosage,
+            @RequestParam(value = "storageLocation", required = false) String storageLocation,
+            @RequestParam("isAlzheimer") boolean isAlzheimer
+    ) {
+        try {
+            Addmemory memory = new Addmemory();
+            memory.setUserId(userId);
+            memory.setTitle(title);
+            memory.setCategory(category);
+            memory.setCustomCategory(customCategory);
+            memory.setDescription(description);
+            if (reminderAt != null && !reminderAt.isEmpty()) {
+                memory.setReminderAt(new Date(reminderAt)); // Or parse from ISO string
+            }
+            memory.setReminderDaily(reminderDaily);
+            memory.setMedicationName(medicationName);
+            memory.setDosage(dosage);
+            memory.setStorageLocation(storageLocation);
+            memory.setAlzheimer(isAlzheimer);
+
+            Addmemory savedMemory = memoryService.createMemory(memory, file, voiceNote);
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "Memory uploaded successfully!", "data", savedMemory));
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", "Failed to upload file."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
 }
