@@ -11,7 +11,8 @@ public class User {
     private String username;
     private String passwordHash; // store hashed password
     private boolean isAlzheimer = false; // default false
-
+    private String encryptionKey;
+    private boolean quickQuestionAnswered = false;
     public User() {}
 
     public User(String username, String passwordHash) {
@@ -31,4 +32,8 @@ public class User {
 
     public boolean isAlzheimer() { return isAlzheimer; }
     public void setAlzheimer(boolean alzheimer) { isAlzheimer = alzheimer; }
+    public String getEncryptionKey() { return encryptionKey; }
+    public void setEncryptionKey(String encryptionKey) { this.encryptionKey = encryptionKey; }
+    public boolean isQuickQuestionAnswered() { return quickQuestionAnswered; }
+    public void setQuickQuestionAnswered(boolean quickQuestionAnswered) { this.quickQuestionAnswered = quickQuestionAnswered; }
 }

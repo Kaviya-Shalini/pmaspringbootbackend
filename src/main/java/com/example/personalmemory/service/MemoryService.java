@@ -24,6 +24,8 @@ public class MemoryService {
     private UserRepository userRepository;
     @Autowired
     private MemoryRepository memoryRepository;
+    @Autowired
+    private EncryptionService encryptionService;
 
     @Value("${file.upload-dir}")
     private String uploadDir;
@@ -34,6 +36,7 @@ public class MemoryService {
                 new ResourceNotFoundException("User not found with id: " + userId));
 
         user.setAlzheimer(isAlzheimer);
+        user.setQuickQuestionAnswered(true);
         return userRepository.save(user);
     }
 
@@ -44,9 +47,7 @@ public class MemoryService {
         return user.isAlzheimer();
     }
 
-    // ** NEW METHOD TO SAVE MEMORY **
-    public Addmemory createMemory(Addmemory memory, MultipartFile file, MultipartFile voiceNote) throws IOException {
-        // Ensure the upload directory exists
+    public Addmemory createMemory(Addmemory memory, MultipartFile file, MultipartFile voiceNote) throws Exception {
         User user = userRepository.findById(memory.getUserId()).orElseThrow(() ->
                 new ResourceNotFoundException("User not found with id: " + memory.getUserId()));
         memory.setAlzheimer(user.isAlzheimer());
@@ -57,16 +58,20 @@ public class MemoryService {
 
         // Handle file upload
         if (file != null && !file.isEmpty()) {
-            String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-            Files.copy(file.getInputStream(), uploadPath.resolve(fileName));
-            memory.setFilePath(uploadPath.resolve(fileName).toString());
+            byte[] encryptedData = encryptionService.encrypt(file.getBytes(), user.getEncryptionKey());
+            String fileName = UUID.randomUUID().toString() + ".encrypted";
+            Path filePath = uploadPath.resolve(fileName);
+            Files.write(filePath, encryptedData);
+            memory.setFilePath(filePath.toString());
         }
 
         // Handle voice note upload
         if (voiceNote != null && !voiceNote.isEmpty()) {
-            String voiceFileName = UUID.randomUUID().toString() + "_" + voiceNote.getOriginalFilename();
-            Files.copy(voiceNote.getInputStream(), uploadPath.resolve(voiceFileName));
-            memory.setVoicePath(uploadPath.resolve(voiceFileName).toString());
+            byte[] encryptedData = encryptionService.encrypt(voiceNote.getBytes(), user.getEncryptionKey());
+            String voiceFileName = UUID.randomUUID().toString() + ".encrypted";
+            Path voicePath = uploadPath.resolve(voiceFileName);
+            Files.write(voicePath, encryptedData);
+            memory.setVoicePath(voicePath.toString());
         }
 
         memory.setCreatedAt(new Date());

@@ -45,7 +45,7 @@ public class Memorycontroller {
             @RequestParam("title") String title,
             @RequestParam("category") String category,
             @RequestParam(value = "customCategory", required = false) String customCategory,
-            @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "description") String description,
             @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "voiceNote", required = false) MultipartFile voiceNote,
             @RequestParam(value = "reminderAt", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date reminderAt,
@@ -53,22 +53,25 @@ public class Memorycontroller {
             @RequestParam(value = "medicationName", required = false) String medicationName,
             @RequestParam(value = "dosage", required = false) String dosage,
             @RequestParam(value = "storageLocation", required = false) String storageLocation
-    ) throws IOException { // Let the method throw the exception
+    ) { // Let the method throw the exception
+        try {
+            Addmemory memory = new Addmemory();
+            memory.setUserId(userId);
+            memory.setTitle(title);
+            memory.setCategory(category);
+            memory.setCustomCategory(customCategory);
+            memory.setDescription(description);
+            memory.setReminderAt(reminderAt);
+            memory.setReminderDaily(reminderDaily);
+            memory.setMedicationName(medicationName);
+            memory.setDosage(dosage);
+            memory.setStorageLocation(storageLocation);
 
-        Addmemory memory = new Addmemory();
-        memory.setUserId(userId);
-        memory.setTitle(title);
-        memory.setCategory(category);
-        memory.setCustomCategory(customCategory);
-        memory.setDescription(description);
-        memory.setReminderAt(reminderAt);
-        memory.setReminderDaily(reminderDaily);
-        memory.setMedicationName(medicationName);
-        memory.setDosage(dosage);
-        memory.setStorageLocation(storageLocation);
+            Addmemory savedMemory = memoryService.createMemory(memory, file, voiceNote);
 
-        Addmemory savedMemory = memoryService.createMemory(memory, file, voiceNote);
-
-        return ResponseEntity.ok(Map.of("success", true, "message", "Memory uploaded successfully!", "data", savedMemory));
+            return ResponseEntity.ok(Map.of("success", true, "message", "Memory uploaded successfully!", "data", savedMemory));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
     }
 }

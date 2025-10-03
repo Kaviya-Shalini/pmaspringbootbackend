@@ -2,6 +2,7 @@ package com.example.personalmemory.service;
 
 import com.example.personalmemory.model.User;
 import com.example.personalmemory.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -11,7 +12,8 @@ import java.util.Optional;
 public class AuthService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-
+    @Autowired
+    private EncryptionService encryptionService;
     public AuthService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
@@ -22,6 +24,14 @@ public class AuthService {
         }
         String hash = encoder.encode(password);
         User user = new User(username, hash);
+        try {
+
+            String key = encryptionService.generateKey();
+            user.setEncryptionKey(key);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Could not generate encryption key for user.");
+        }
         return userRepository.save(user);
     }
 

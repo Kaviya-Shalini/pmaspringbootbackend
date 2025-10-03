@@ -27,7 +27,8 @@ public class AuthController {
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Account created successfully!",
-                    "userId", user.getId()
+                    "userId", user.getId(),
+                    "quickQuestionAnswered", user.isQuickQuestionAnswered()
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -50,7 +51,8 @@ public class AuthController {
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Login successful!",
-                    "userId", user.getId() // Add userId to the response
+                    "userId", user.getId(), // Add userId to the response
+                    "quickQuestionAnswered", user.isQuickQuestionAnswered()
             ));
         } else {
             return ResponseEntity.status(401).body(Map.of(
