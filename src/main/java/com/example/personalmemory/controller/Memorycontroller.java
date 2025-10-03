@@ -8,6 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Map;
 
@@ -57,8 +61,11 @@ public class Memorycontroller {
             memory.setCategory(category);
             memory.setCustomCategory(customCategory);
             memory.setDescription(description);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d, yyyy, hh:mm:ss a");
+
             if (reminderAt != null && !reminderAt.isEmpty()) {
-                memory.setReminderAt(new Date(reminderAt)); // Or parse from ISO string
+                LocalDateTime ldt = LocalDateTime.parse(reminderAt, formatter);
+                memory.setReminderAt(Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant()));
             }
             memory.setReminderDaily(reminderDaily);
             memory.setMedicationName(medicationName);

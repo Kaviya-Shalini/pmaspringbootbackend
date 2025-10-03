@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api")
@@ -41,11 +42,15 @@ public class AuthController {
         String username = body.get("username");
         String password = body.get("password");
 
-        boolean valid = authService.login(username, password);
-        if (valid) {
+        // Use the updated service method
+        Optional<User> userOpt = authService.login(username, password);
+
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "Login successful!"
+                    "message", "Login successful!",
+                    "userId", user.getId() // Add userId to the response
             ));
         } else {
             return ResponseEntity.status(401).body(Map.of(

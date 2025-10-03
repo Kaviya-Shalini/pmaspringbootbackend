@@ -25,9 +25,15 @@ public class AuthService {
         return userRepository.save(user);
     }
 
-    public boolean login(String username, String password) {
+    public Optional<User> login(String username, String password) {
         Optional<User> opt = userRepository.findByUsername(username);
-        if (opt.isEmpty()) return false;
-        return encoder.matches(password, opt.get().getPasswordHash());
+        if (opt.isPresent()) {
+            User user = opt.get();
+            // Check if password matches
+            if (encoder.matches(password, user.getPasswordHash())) {
+                return Optional.of(user); // Return the user object
+            }
+        }
+        return Optional.empty(); // Return empty if login fails
     }
 }
