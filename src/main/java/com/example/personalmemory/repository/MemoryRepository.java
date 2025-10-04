@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface MemoryRepository extends MongoRepository<Addmemory, String> {
     List<Addmemory> findByUserId(String userId);
+    List<Addmemory> findByUserIdOrderByCreatedAtDesc(String userId);
 }
