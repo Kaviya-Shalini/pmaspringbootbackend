@@ -28,7 +28,7 @@ public class DashboardController {
     }
 
     @GetMapping("/memories/recent/{userId}")
-    public List<Object> getRecentMemories(@PathVariable String userId) {
+    public List<Map<String, Object>> getRecentMemories(@PathVariable String userId) {
         return dashboardService.getRecentMemories(userId);
     }
 }

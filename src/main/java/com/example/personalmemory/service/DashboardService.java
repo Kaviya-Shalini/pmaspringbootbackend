@@ -6,7 +6,9 @@ import com.example.personalmemory.repository.MemoryRepository;
 import com.example.personalmemory.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,14 +27,17 @@ public class DashboardService {
                 .orElseThrow(() -> new RuntimeException("User not found!"));
     }
 
-    public List<Object> getRecentMemories(String userId) {
+    public List<Map<String, Object>> getRecentMemories(String userId) {
         return memoryRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
-                .limit(5)
-                .map(m -> new Object() {
-                    public String title = m.getTitle();
-                    public String category = m.getCategory();
-                    public String description = m.getDescription();
+                .map(m -> {
+                    Map<String, Object> memoryMap = new HashMap<>();
+                    memoryMap.put("title", m.getTitle());
+                    memoryMap.put("category", m.getCategory());
+                    memoryMap.put("customCategory", m.getCustomCategory());
+                    memoryMap.put("description", m.getDescription());
+                    memoryMap.put("createdAt", m.getCreatedAt()); // Ensure createdAt is included
+                    return memoryMap;
                 })
                 .collect(Collectors.toList());
     }

@@ -1,12 +1,16 @@
 package com.example.personalmemory.service;
 
 import com.example.personalmemory.model.Addmemory;
+import com.example.personalmemory.model.DecryptedFile;
 import com.example.personalmemory.model.User;
 import com.example.personalmemory.repository.MemoryRepository;
 import com.example.personalmemory.exception.ResourceNotFoundException;
 import com.example.personalmemory.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -63,6 +67,7 @@ public class MemoryService {
             Path filePath = uploadPath.resolve(fileName);
             Files.write(filePath, encryptedData);
             memory.setFilePath(filePath.toString());
+            memory.setOriginalFileName(file.getOriginalFilename());
         }
 
         // Handle voice note upload
@@ -72,6 +77,7 @@ public class MemoryService {
             Path voicePath = uploadPath.resolve(voiceFileName);
             Files.write(voicePath, encryptedData);
             memory.setVoicePath(voicePath.toString());
+            memory.setOriginalVoiceName(voiceNote.getOriginalFilename());
         }
 
         memory.setCreatedAt(new Date());
@@ -79,4 +85,88 @@ public class MemoryService {
 
         return memoryRepository.save(memory);
     }
+    // In MemoryService.java
+    public DecryptedFile getDecryptedMemoryFile(String memoryId, String type) throws Exception {
+        Addmemory memory = memoryRepository.findById(memoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Memory not found with id: " + memoryId));
+
+        User user = userRepository.findById(memory.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found for memory"));
+
+        String filePath;
+        String originalName;
+
+        if ("voice".equalsIgnoreCase(type)) {
+            filePath = memory.getVoicePath();
+            originalName = memory.getOriginalVoiceName() != null ? memory.getOriginalVoiceName() : "voice_note.mp3";
+        } else {
+            filePath = memory.getFilePath();
+            originalName = memory.getOriginalFileName() != null ? memory.getOriginalFileName() : "file.bin";
+        }
+
+        if (filePath == null || filePath.isEmpty())
+            throw new ResourceNotFoundException("File not found for this memory");
+
+        byte[] encryptedData = Files.readAllBytes(Paths.get(filePath));
+        byte[] decryptedData = encryptionService.decrypt(encryptedData, user.getEncryptionKey());
+        System.out.println("Decrypted " + type + " file: " + originalName + ", size = " + decryptedData.length);
+
+        return new DecryptedFile(decryptedData, originalName);
+    }
+    public Addmemory createMemory(String userId, String title, String category, String customCategory,
+                                  String description, MultipartFile file, MultipartFile voiceNote,
+                                  Date reminderAt, boolean reminderDaily) throws Exception {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        Addmemory memory = new Addmemory();
+        memory.setUserId(userId);
+        memory.setTitle(title);
+        memory.setCategory(category);
+        memory.setCustomCategory(customCategory);
+        memory.setDescription(description);
+        memory.setReminderAt(reminderAt);
+        memory.setReminderDaily(reminderDaily);
+        memory.setAlzheimer(user.isAlzheimer());
+        memory.setCreatedAt(new Date());
+        memory.setUpdatedAt(new Date());
+
+        Path uploadPath = Paths.get(uploadDir);
+        if (!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
+
+        // 🔹 Encrypt and save uploaded file
+        if (file != null && !file.isEmpty()) {
+            byte[] encryptedData = encryptionService.encrypt(file.getBytes(), user.getEncryptionKey());
+            String fileName = UUID.randomUUID().toString() + ".encrypted";
+            Path filePath = uploadPath.resolve(fileName);
+            Files.write(filePath, encryptedData);
+            memory.setFilePath(filePath.toString());
+            memory.setOriginalFileName(file.getOriginalFilename());
+        }
+
+        // 🔹 Encrypt and save voice note
+        if (voiceNote != null && !voiceNote.isEmpty()) {
+            byte[] encryptedData = encryptionService.encrypt(voiceNote.getBytes(), user.getEncryptionKey());
+            String voiceName = UUID.randomUUID().toString() + ".encrypted";
+            Path voicePath = uploadPath.resolve(voiceName);
+            Files.write(voicePath, encryptedData);
+            memory.setVoicePath(voicePath.toString());
+            memory.setOriginalVoiceName(voiceNote.getOriginalFilename());
+        }
+
+        return memoryRepository.save(memory);
+    }
+
+    // ✅ Get all memories with pagination & search
+    public Page<Addmemory> getAllMemories(Pageable pageable, String search) {
+        if (search == null || search.isBlank()) {
+            return memoryRepository.findAll(pageable);
+        } else {
+            return memoryRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrCategoryContainingIgnoreCase(
+                    search, search, search, pageable
+            );
+        }
+    }
+
 }

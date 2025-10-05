@@ -20,7 +20,9 @@ public class Addmemory {
 
     // paths where files are saved on server (uploads/)
     private String filePath;
+    private String originalFileName;
     private String voicePath;
+    private String originalVoiceName;
 
     private Date reminderAt;
     private boolean reminderDaily;
@@ -67,6 +69,11 @@ public class Addmemory {
 
     public String getVoicePath() { return voicePath; }
     public void setVoicePath(String voicePath) { this.voicePath = voicePath; }
+    public String getOriginalFileName() { return originalFileName; }
+    public void setOriginalFileName(String originalFileName) { this.originalFileName = originalFileName; }
+
+    public String getOriginalVoiceName() { return originalVoiceName; }
+    public void setOriginalVoiceName(String originalVoiceName) { this.originalVoiceName = originalVoiceName; }
 
     public Date getReminderAt() { return reminderAt; }
     public void setReminderAt(Date reminderAt) { this.reminderAt = reminderAt; }

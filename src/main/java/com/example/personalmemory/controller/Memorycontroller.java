@@ -1,10 +1,17 @@
 package com.example.personalmemory.controller;
 
 import com.example.personalmemory.model.Addmemory;
+import com.example.personalmemory.model.DecryptedFile;
 import com.example.personalmemory.model.User;
 import com.example.personalmemory.service.MemoryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -74,4 +81,49 @@ public class Memorycontroller {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         }
     }
+
+    @GetMapping("/memories/{memoryId}/download")
+    public ResponseEntity<byte[]> downloadMemoryFile(
+            @PathVariable String memoryId,
+            @RequestParam("type") String type
+    ) {
+        try {
+            DecryptedFile decryptedFile = memoryService.getDecryptedMemoryFile(memoryId, type);
+
+            HttpHeaders headers = new HttpHeaders();
+            String filename = decryptedFile.getFilename();
+
+            // Detect content type based on file extension
+            MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+            if (filename.endsWith(".mp3")) mediaType = MediaType.valueOf("audio/mpeg");
+            else if (filename.endsWith(".wav")) mediaType = MediaType.valueOf("audio/wav");
+            else if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) mediaType = MediaType.IMAGE_JPEG;
+            else if (filename.endsWith(".png")) mediaType = MediaType.IMAGE_PNG;
+            else if (filename.endsWith(".pdf")) mediaType = MediaType.APPLICATION_PDF;
+
+            headers.setContentType(mediaType);
+            headers.setContentDispositionFormData("attachment", filename);
+
+            return new ResponseEntity<>(decryptedFile.getData(), headers, HttpStatus.OK);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(("Error downloading file: " + e.getMessage()).getBytes());
+        }
+    }
+
+
+    // ✅ Get memories (with pagination & search)
+    @GetMapping("/memories")
+    public ResponseEntity<?> getMemories(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Addmemory> memories = memoryService.getAllMemories(pageable, search);
+        return ResponseEntity.ok(memories);
+    }
+
+
 }
