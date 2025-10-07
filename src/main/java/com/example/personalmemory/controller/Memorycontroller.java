@@ -141,7 +141,7 @@ public class Memorycontroller {
             ));
         }
     }
-    // Get memories by userId with pagination and optional search
+
     @GetMapping("/memories/user/{userId}")
     public ResponseEntity<?> getMemoriesByUser(
             @PathVariable String userId,
@@ -149,18 +149,8 @@ public class Memorycontroller {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search
     ) {
-        // Reuse MemoryService.getAllMemories but filter by userId
         Pageable pageable = PageRequest.of(page, size);
-        Page<Addmemory> memories;
-        if (search == null || search.isBlank()) {
-            memories = memoryService.getAllMemories(PageRequest.of(page, size), null)
-                    .map(m -> m) // placeholder - we'll use repository method to filter by user
-            ;
-            // use repository method for user-specific
-            memories = memoryService.getAllMemoriesByUser(userId, pageable, search);
-        } else {
-            memories = memoryService.getAllMemoriesByUser(userId, pageable, search);
-        }
+        Page<Addmemory> memories = memoryService.getAllMemoriesByUser(userId, pageable, search);
         return ResponseEntity.ok(Map.of(
                 "content", memories.getContent(),
                 "page", memories.getNumber(),
@@ -169,6 +159,5 @@ public class Memorycontroller {
                 "totalElements", memories.getTotalElements()
         ));
     }
-
 
 }

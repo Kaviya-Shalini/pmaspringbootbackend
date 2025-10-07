@@ -201,6 +201,7 @@ public class MemoryService {
             throw new RuntimeException("Error deleting memory files: " + e.getMessage());
         }
     }
+
     // in MemoryService.java (add these near getAllMemories)
     public Page<Addmemory> getAllMemoriesByUser(String userId, Pageable pageable, String search) {
         if (search == null || search.isBlank()) {
