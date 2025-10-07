@@ -125,5 +125,50 @@ public class Memorycontroller {
         return ResponseEntity.ok(memories);
     }
 
+    // ✅ DELETE a memory (and its associated files)
+    @DeleteMapping("/memories/{memoryId}")
+    public ResponseEntity<?> deleteMemory(@PathVariable String memoryId) {
+        try {
+            memoryService.deleteMemory(memoryId);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Memory and associated files deleted successfully!"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+    // Get memories by userId with pagination and optional search
+    @GetMapping("/memories/user/{userId}")
+    public ResponseEntity<?> getMemoriesByUser(
+            @PathVariable String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search
+    ) {
+        // Reuse MemoryService.getAllMemories but filter by userId
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Addmemory> memories;
+        if (search == null || search.isBlank()) {
+            memories = memoryService.getAllMemories(PageRequest.of(page, size), null)
+                    .map(m -> m) // placeholder - we'll use repository method to filter by user
+            ;
+            // use repository method for user-specific
+            memories = memoryService.getAllMemoriesByUser(userId, pageable, search);
+        } else {
+            memories = memoryService.getAllMemoriesByUser(userId, pageable, search);
+        }
+        return ResponseEntity.ok(Map.of(
+                "content", memories.getContent(),
+                "page", memories.getNumber(),
+                "size", memories.getSize(),
+                "totalPages", memories.getTotalPages(),
+                "totalElements", memories.getTotalElements()
+        ));
+    }
+
 
 }

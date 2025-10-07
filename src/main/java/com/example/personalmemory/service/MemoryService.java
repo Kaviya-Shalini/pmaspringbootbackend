@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -168,5 +169,57 @@ public class MemoryService {
             );
         }
     }
+
+    // ✅ Delete memory and its associated files
+    public void deleteMemory(String memoryId) {
+        Addmemory memory = memoryRepository.findById(memoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Memory not found with id: " + memoryId));
+
+        try {
+            // Delete encrypted file if exists
+            if (memory.getFilePath() != null && !memory.getFilePath().isEmpty()) {
+                Path filePath = Paths.get(memory.getFilePath());
+                if (Files.exists(filePath)) {
+                    Files.delete(filePath);
+                    System.out.println("Deleted file: " + filePath);
+                }
+            }
+
+            // Delete voice note file if exists
+            if (memory.getVoicePath() != null && !memory.getVoicePath().isEmpty()) {
+                Path voicePath = Paths.get(memory.getVoicePath());
+                if (Files.exists(voicePath)) {
+                    Files.delete(voicePath);
+                    System.out.println("Deleted voice note: " + voicePath);
+                }
+            }
+
+            // Finally delete the memory document
+            memoryRepository.delete(memory);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Error deleting memory files: " + e.getMessage());
+        }
+    }
+    // in MemoryService.java (add these near getAllMemories)
+    public Page<Addmemory> getAllMemoriesByUser(String userId, Pageable pageable, String search) {
+        if (search == null || search.isBlank()) {
+            return memoryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        } else {
+            // this repository search is global; to restrict to userId we'd need a custom query.
+            // Simple approach: use repository method to get user page and then filter in-memory if needed.
+            Page<Addmemory> page = memoryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+            // fallback: when search provided, do a simple filter on page content
+            List<Addmemory> filtered = page.getContent().stream().filter(m ->
+                    (m.getTitle() != null && m.getTitle().toLowerCase().contains(search.toLowerCase())) ||
+                            (m.getDescription() != null && m.getDescription().toLowerCase().contains(search.toLowerCase())) ||
+                            (m.getCategory() != null && m.getCategory().toLowerCase().contains(search.toLowerCase())) ||
+                            (m.getCustomCategory() != null && m.getCustomCategory().toLowerCase().contains(search.toLowerCase()))
+            ).toList();
+            // Build a PageImpl preserving pageable info
+            return new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
+        }
+    }
+
 
 }
