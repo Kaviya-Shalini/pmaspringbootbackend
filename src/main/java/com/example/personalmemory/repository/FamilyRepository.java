@@ -14,5 +14,5 @@ public interface FamilyRepository extends MongoRepository<FamilyConnection, Stri
     List<FamilyConnection> findByFamilyUsername(String familyUsername);
     Optional<FamilyConnection> findByUserIdAndFamilyUsername(String userId, String familyUsername);
     void deleteByUserIdAndFamilyUsername(String userId, String familyUsername);
-
+    void deleteByUserId(String userId);
 }

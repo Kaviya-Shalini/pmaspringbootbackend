@@ -13,4 +13,5 @@ public interface ChatRepository extends MongoRepository<ChatMessage, String> {
     List<ChatMessage> findByFromUserAndToUserAndDeletedFalseOrderByCreatedAtAsc(String fromUser, String toUser);
     List<ChatMessage> findByFromUserAndToUserOrFromUserAndToUserAndDeletedFalseOrderByCreatedAtAsc(
             String from1, String to1, String from2, String to2);
+    void deleteByUserId(String userId);
 }

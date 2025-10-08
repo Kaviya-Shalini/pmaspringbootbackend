@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface AlertRepository extends MongoRepository<Alert, String> {
     List<Alert> findByPatientIdOrderByTimestampDesc(String patientId);
+    void deleteByUserId(String userId);
 }

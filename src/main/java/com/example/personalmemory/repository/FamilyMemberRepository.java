@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface FamilyMemberRepository extends MongoRepository<FamilyMember, String> {
     List<FamilyMember> findByPatientId(String patientId);
+    void deleteByUserId(String userId);
 }

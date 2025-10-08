@@ -61,4 +61,19 @@ public class AuthController {
             ));
         }
     }
+    @DeleteMapping("/user/{userId}")
+    public ResponseEntity<?> deleteAccount(@PathVariable String userId) {
+        boolean deleted = authService.deleteUser(userId);
+        if (deleted) {
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "User account and all related data deleted successfully"
+            ));
+        } else {
+            return ResponseEntity.status(404).body(Map.of(
+                    "success", false,
+                    "message", "User not found"
+            ));
+        }
+    }
 }

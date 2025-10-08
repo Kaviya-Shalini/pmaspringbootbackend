@@ -1,6 +1,6 @@
 package com.example.personalmemory.controller;
 
-import com.example.personalmemory.model.PhotoContact;
+import com.example.personalmemory.model.EmergencyContact;
 import com.example.personalmemory.service.EmergencyContactService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
@@ -35,7 +35,7 @@ public class EmergencyContactController {
             @RequestPart(value = "photo", required = false) MultipartFile photo
     ) {
         try {
-            PhotoContact saved = svc.addContact(name, relationship, phone, photo);
+            EmergencyContact saved = svc.addContact(name, relationship, phone, photo);
             return ResponseEntity.status(HttpStatus.CREATED).body(mapToResponse(saved));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
@@ -67,7 +67,7 @@ public class EmergencyContactController {
             @RequestParam(defaultValue = "5") int size,
             @RequestParam(defaultValue = "") String q
     ) {
-        Page<PhotoContact> p = svc.getContacts(page, size, q);
+        Page<EmergencyContact> p = svc.getContacts(page, size, q);
         Map<String, Object> resp = new HashMap<>();
         resp.put("items", p.getContent().stream().map(this::mapToResponse).collect(Collectors.toList()));
         resp.put("total", p.getTotalElements());
@@ -98,14 +98,16 @@ public class EmergencyContactController {
         return ResponseEntity.noContent().build();
     }
 
-    private Map<String, Object> mapToResponse(PhotoContact c) {
+    private Map<String, Object> mapToResponse(EmergencyContact c) {
         Map<String, Object> m = new HashMap<>();
         m.put("id", c.getId());
         m.put("name", c.getName());
         m.put("relationship", c.getRelationship());
         m.put("phone", c.getPhone());
         m.put("createdAt", c.getCreatedAt() != null ? c.getCreatedAt().toString() : Instant.now().toString());
-        m.put("photoUrl", c.getPhotoFileId() != null ? "/api/emergencycontacts/photo/" + c.getPhotoFileId() : null);
+        String baseUrl = "http://localhost:8080";
+        m.put("photoUrl", c.getPhotoFileId() != null ? baseUrl + "/api/emergencycontacts/photo/" + c.getPhotoFileId() : null);
+
         return m;
     }
 }

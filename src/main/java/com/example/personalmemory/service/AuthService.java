@@ -1,7 +1,7 @@
 package com.example.personalmemory.service;
 
 import com.example.personalmemory.model.User;
-import com.example.personalmemory.repository.UserRepository;
+import com.example.personalmemory.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,6 +17,26 @@ public class AuthService {
     public AuthService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
+    @Autowired
+    private UserRepository userrepository;
+    @Autowired
+    private PhotoEntryRepository photoEntryRepository;
+    @Autowired
+    private PhotoContactRepository photoContactRepository;
+    @Autowired
+    private MemoryRepository memoryRepository;
+    @Autowired
+    private LocationRepository locationRepository;
+    @Autowired
+    private FamilyRepository familyRepository;
+    @Autowired
+    private FamilyMemberRepository familyMemberRepository;
+    @Autowired
+    private EmergencyContactRepository emergencyContactRepository;
+    @Autowired
+    private ChatRepository chatRepository;
+    @Autowired
+    private AlertRepository alertRepository;
 
     public User register(String username, String password) {
         if (userRepository.findByUsername(username).isPresent()) {
@@ -45,5 +65,22 @@ public class AuthService {
             }
         }
         return Optional.empty(); // Return empty if login fails
+    }
+    public boolean deleteUser(String userId) {
+        if (!userRepository.existsById(userId)) return false;
+
+        // Delete all related collections
+        memoryRepository.deleteByUserId(userId);
+        emergencyContactRepository.deleteByUserId(userId);
+        photoContactRepository.deleteByUserId(userId);
+        photoEntryRepository.deleteByOwnerId(userId);
+        locationRepository.deleteByUserId(userId);
+        familyRepository.deleteByUserId(userId);
+        familyMemberRepository.deleteByUserId(userId);
+        alertRepository.deleteByUserId(userId);
+        chatRepository.deleteByUserId(userId);
+        // Delete user
+        userRepository.deleteById(userId);
+        return true;
     }
 }

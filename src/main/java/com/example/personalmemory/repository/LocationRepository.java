@@ -6,4 +6,5 @@ import java.util.Optional;
 
 public interface LocationRepository extends MongoRepository<Location, String> {
     Optional<Location> findByPatientIdAndIsPermanent(String patientId, boolean isPermanent);
+    void deleteByUserId(String userId);
 }
