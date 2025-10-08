@@ -25,4 +25,12 @@ public class LocationController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+    // Add this method inside your LocationController class
+
+    @PutMapping
+    public ResponseEntity<Location> updateLocation(@PathVariable String patientId, @RequestBody Location location) {
+        // The saveLocation service method can handle both create and update
+        Location updatedLocation = locationService.saveLocation(patientId, location);
+        return ResponseEntity.ok(updatedLocation);
+    }
 }
