@@ -2,35 +2,30 @@ package com.example.personalmemory.controller;
 
 import com.example.personalmemory.model.Location;
 import com.example.personalmemory.service.LocationService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal; // <-- Import this
+import org.springframework.security.core.userdetails.UserDetails; // <-- And this
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/api/patients/{patientId}/location")
+@RequestMapping("/api/locations")
 public class LocationController {
 
-    @Autowired
-    private LocationService locationService;
+    private final LocationService locationService;
+
+    public LocationController(LocationService locationService) {
+        this.locationService = locationService;
+    }
 
     @PostMapping
-    public ResponseEntity<Location> saveLocation(@PathVariable String patientId, @RequestBody Location location) {
-        Location savedLocation = locationService.saveLocation(patientId, location);
-        return ResponseEntity.ok(savedLocation);
+    public Location saveLocation(@RequestBody Location location, @AuthenticationPrincipal UserDetails currentUser) { // <-- Get the user
+        // Pass the username (or user ID) to the service
+        return locationService.saveLocation(location, currentUser.getUsername());
     }
 
-    @GetMapping
-    public ResponseEntity<Location> getPermanentLocation(@PathVariable String patientId) {
-        return locationService.getPermanentLocation(patientId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-    // Add this method inside your LocationController class
-// Add this inside your LocationController class
-
-    @PutMapping
-    public ResponseEntity<Location> updateLocation(@PathVariable String patientId, @RequestBody Location location) {
-        Location updatedLocation = locationService.saveLocation(patientId, location);
-        return ResponseEntity.ok(updatedLocation);
+    @GetMapping("/{userId}")
+    public List<Location> getLocationsByUserId(@PathVariable String userId) {
+        return locationService.getLocationsByUserId(userId);
     }
 }

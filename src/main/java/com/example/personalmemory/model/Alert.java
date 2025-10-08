@@ -8,7 +8,7 @@ public class Alert {
     private double longitude;
     private String message;
     private Instant timestamp;
-
+    private String userId;
     // Getters and Setters
     public String getPatientId() { return patientId; }
     public void setPatientId(String patientId) { this.patientId = patientId; }
@@ -20,4 +20,6 @@ public class Alert {
     public void setMessage(String message) { this.message = message; }
     public Instant getTimestamp() { return timestamp; }
     public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
 }

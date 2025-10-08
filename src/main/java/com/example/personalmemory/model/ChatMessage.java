@@ -15,7 +15,7 @@ public class ChatMessage {
     private String message;
     private Date createdAt;
     private boolean deleted = false;
-
+    private String userId;
     public ChatMessage() {}
 
     public ChatMessage(String fromUser, String toUser, String message, Date createdAt) {
@@ -43,4 +43,6 @@ public class ChatMessage {
 
     public boolean isDeleted() { return deleted; }
     public void setDeleted(boolean deleted) { this.deleted = deleted; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
 }
