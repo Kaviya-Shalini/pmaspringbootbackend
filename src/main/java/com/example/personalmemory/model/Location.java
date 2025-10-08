@@ -13,7 +13,7 @@ public class Location {
     private String address;
     private boolean isPermanent;
 
-    // Standard Getters and Setters
+    // Getters and Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getPatientId() { return patientId; }
@@ -24,6 +24,8 @@ public class Location {
     public void setLongitude(double longitude) { this.longitude = longitude; }
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
+
+    // **ADD THIS GETTER AND SETTER**
     public boolean isPermanent() { return isPermanent; }
     public void setPermanent(boolean permanent) { isPermanent = permanent; }
 }

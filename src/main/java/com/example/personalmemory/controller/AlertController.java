@@ -11,7 +11,7 @@ public class AlertController {
     @PostMapping("/danger")
     public ResponseEntity<?> danger(@RequestBody Alert alert) {
         // In a real application, you would process this alert (e.g., send a notification)
-        System.out.println("Received danger alert for patient: " + alert.getPatientId());
+        System.out.println("Received DANGER alert for patient: " + alert.getPatientId() + " at lat: " + alert.getLatitude());
         return ResponseEntity.ok().build();
     }
 }
