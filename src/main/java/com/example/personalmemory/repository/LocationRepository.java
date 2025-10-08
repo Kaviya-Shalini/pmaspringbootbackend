@@ -5,5 +5,5 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.Optional;
 
 public interface LocationRepository extends MongoRepository<Location, String> {
-    Optional<Location> findByPatientId(String patientId);
+    Optional<Location> findByPatientIdAndIsPermanent(String patientId, boolean isPermanent);
 }

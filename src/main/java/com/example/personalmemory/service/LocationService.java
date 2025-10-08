@@ -2,33 +2,28 @@ package com.example.personalmemory.service;
 
 import com.example.personalmemory.model.Location;
 import com.example.personalmemory.repository.LocationRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.time.Instant;
 import java.util.Optional;
 
 @Service
 public class LocationService {
 
-    private final LocationRepository repo;
+    @Autowired
+    private LocationRepository locationRepository;
 
-    public LocationService(LocationRepository repo) {
-        this.repo = repo;
+    public Location saveLocation(String patientId, Location location) {
+        location.setPatientId(patientId);
+        // If setting a new permanent location, remove the old one first
+        if (location.isPermanent()) {
+            locationRepository.findByPatientIdAndIsPermanent(patientId, true).ifPresent(loc -> {
+                locationRepository.delete(loc);
+            });
+        }
+        return locationRepository.save(location);
     }
 
-    public Optional<Location> getByPatientId(String patientId) {
-        return repo.findByPatientId(patientId);
-    }
-
-    public Location saveOrUpdate(String patientId, double lat, double lng, String address) {
-        Instant now = Instant.now();
-        Location loc = repo.findByPatientId(patientId)
-                .orElseGet(() -> new Location(patientId, lat, lng, address, now));
-
-        loc.setLatitude(lat);
-        loc.setLongitude(lng);
-        loc.setAddress(address);
-        loc.setSavedAt(now);
-        return repo.save(loc);
+    public Optional<Location> getPermanentLocation(String patientId) {
+        return locationRepository.findByPatientIdAndIsPermanent(patientId, true);
     }
 }
