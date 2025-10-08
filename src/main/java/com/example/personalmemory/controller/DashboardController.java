@@ -21,7 +21,7 @@ public class DashboardController {
     public Map<String, Object> getUser(@PathVariable String userId) {
         User user = dashboardService.getUserInfo(userId);
         return Map.of(
-                "id", user.getId(),
+                "userId", user.getId(), // Return userId as well
                 "username", user.getUsername(),
                 "isAlzheimer", user.isAlzheimer()
         );

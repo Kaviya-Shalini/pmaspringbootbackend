@@ -21,7 +21,6 @@ public class FamilyController {
     @PostMapping("/connect")
     public ResponseEntity<?> connect(@RequestHeader(value = "X-Username", required = false) String ownerUsername,
                                      @RequestBody Map<String, String> body) {
-        // In your app you probably use userId; here we accept userId or infer from header.
         String userId = body.getOrDefault("userId", ownerUsername);
         String usernameToConnect = body.get("username");
         if (userId == null || usernameToConnect == null) {

@@ -202,23 +202,25 @@ public class MemoryService {
         }
     }
 
-    // in MemoryService.java (add these near getAllMemories)
+    // in kaviya-shalini/pmaspringbootbackend/pmaspringbootbackend-1d87d4012b9e820e43fce3354280658357151b4a/src/main/java/com/example/personalmemory/service/MemoryService.java
     public Page<Addmemory> getAllMemoriesByUser(String userId, Pageable pageable, String search) {
+        User user = userRepository.findById(userId).orElse(null);
+        boolean isPatient = user != null && user.isAlzheimer();
+
+        // If the user is a patient, they see all their memories.
+        // If the user is a family member, they only see the patient's memories that have the isAlzheimer flag set to true.
         if (search == null || search.isBlank()) {
-            return memoryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+            if (isPatient) {
+                return memoryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+            } else {
+                return memoryRepository.findByUserIdAndIsAlzheimerOrderByCreatedAtDesc(userId, true, pageable);
+            }
         } else {
-            // this repository search is global; to restrict to userId we'd need a custom query.
-            // Simple approach: use repository method to get user page and then filter in-memory if needed.
-            Page<Addmemory> page = memoryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
-            // fallback: when search provided, do a simple filter on page content
-            List<Addmemory> filtered = page.getContent().stream().filter(m ->
-                    (m.getTitle() != null && m.getTitle().toLowerCase().contains(search.toLowerCase())) ||
-                            (m.getDescription() != null && m.getDescription().toLowerCase().contains(search.toLowerCase())) ||
-                            (m.getCategory() != null && m.getCategory().toLowerCase().contains(search.toLowerCase())) ||
-                            (m.getCustomCategory() != null && m.getCustomCategory().toLowerCase().contains(search.toLowerCase()))
-            ).toList();
-            // Build a PageImpl preserving pageable info
-            return new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
+            if (isPatient) {
+                return memoryRepository.findByUserIdAndSearchTerm(userId, search, pageable);
+            } else {
+                return memoryRepository.findByUserIdAndIsAlzheimerAndSearchTerm(userId, true, search, pageable);
+            }
         }
     }
 
