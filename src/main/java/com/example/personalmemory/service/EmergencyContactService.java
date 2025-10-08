@@ -30,16 +30,18 @@ public class EmergencyContactService {
         this.gridFsTemplate = gridFsTemplate;
     }
 
-    public EmergencyContact addContact(String name, String relationship, String phone, MultipartFile photo) throws IOException {
+    public EmergencyContact addContact(String name, String relationship, String phone, MultipartFile photo, String userId) throws IOException {
         if (repo.count() >= 5) {
             throw new IllegalStateException("Maximum 5 emergency contacts allowed.");
         }
 
+        // Use the correct model here
         EmergencyContact c = new EmergencyContact();
         c.setName(name.trim());
         c.setRelationship(relationship.trim());
         c.setPhone(phone.trim());
         c.setCreatedAt(Instant.now());
+        c.setUserId(userId);
 
         if (photo != null && !photo.isEmpty()) {
             ObjectId fileId = gridFsTemplate.store(photo.getInputStream(), photo.getOriginalFilename(), photo.getContentType());

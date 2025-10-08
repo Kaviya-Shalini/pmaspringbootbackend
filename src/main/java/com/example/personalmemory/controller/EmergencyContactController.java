@@ -7,6 +7,8 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.mongodb.gridfs.GridFsResource;
 import org.springframework.http.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal; // <-- Import this
+import org.springframework.security.core.userdetails.UserDetails; // <-- And this
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -32,10 +34,12 @@ public class EmergencyContactController {
             @RequestPart("name") String name,
             @RequestPart("relationship") String relationship,
             @RequestPart("phone") String phone,
-            @RequestPart(value = "photo", required = false) MultipartFile photo
+            @RequestPart(value = "photo", required = false) MultipartFile photo,
+            @AuthenticationPrincipal UserDetails currentUser // <-- Get the authenticated user
     ) {
         try {
-            EmergencyContact saved = svc.addContact(name, relationship, phone, photo);
+            // Now, pass the username (or user ID) to the service
+            EmergencyContact saved = svc.addContact(name, relationship, phone, photo, currentUser.getUsername());
             return ResponseEntity.status(HttpStatus.CREATED).body(mapToResponse(saved));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));

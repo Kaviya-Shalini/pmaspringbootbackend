@@ -18,7 +18,7 @@ public class PhotoContact {
     private String photoFileId;
 
     private Instant createdAt;
-
+    private String userId;
     public PhotoContact() {}
 
     // getters & setters
@@ -39,4 +39,6 @@ public class PhotoContact {
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
 }
