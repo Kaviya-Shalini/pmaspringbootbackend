@@ -1,107 +1,36 @@
-// in kaviya-shalini/pmaspringbootbackend/pmaspringbootbackend-7fe149d3a1ed8327691014420d2b6aba8592c29e/src/main/java/com/example/personalmemory/controller/FamilyController.java
 package com.example.personalmemory.controller;
 
-import com.example.personalmemory.model.FamilyConnection;
-import com.example.personalmemory.model.User;
-import com.example.personalmemory.repository.UserRepository;
+import com.example.personalmemory.model.FamilyMember;
 import com.example.personalmemory.service.FamilyService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal; // <-- Import this
+import org.springframework.security.core.userdetails.UserDetails; // <-- And this
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/family")
 public class FamilyController {
 
-    @Autowired
-    private FamilyService familyService;
+    private final FamilyService familyService;
 
-    @Autowired
-    private UserRepository userRepository; // Inject UserRepository
-
-    @PostMapping("/connect")
-    public ResponseEntity<?> connect(@RequestHeader(value = "X-Username", required = false) String ownerUsername,
-                                     @RequestBody Map<String, String> body) {
-        String usernameToConnect = body.get("username");
-
-        if (ownerUsername == null || usernameToConnect == null) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Missing username information"));
-        }
-
-        // Find the owner user by username to get their actual ID
-        User owner = userRepository.findByUsername(ownerUsername)
-                .orElse(null);
-        if (owner == null) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Owner user not found"));
-        }
-
-        FamilyConnection created = familyService.connect(owner.getId(), usernameToConnect);
-        if (created == null) {
-            return ResponseEntity.ok(Map.of("success", true, "message", "Already connected"));
-        }
-        return ResponseEntity.ok(Map.of("success", true, "message", "Family member connected", "data", created));
+    public FamilyController(FamilyService familyService) {
+        this.familyService = familyService;
     }
 
-    @GetMapping("/list")
-    public ResponseEntity<?> list(@RequestHeader(value = "X-Username", required = false) String ownerUsername) {
-        if (ownerUsername == null) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Missing user identifier"));
-        }
-
-        User currentUser = userRepository.findByUsername(ownerUsername).orElse(null);
-        if (currentUser == null) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "User not found"));
-        }
-
-        List<User> connectedUsers;
-        if (currentUser.isAlzheimer()) {
-            // Patient is logged in, find their family members
-            List<FamilyConnection> connections = familyService.listForUser(currentUser.getId());
-            List<String> usernames = connections.stream().map(FamilyConnection::getFamilyUsername).toList();
-            connectedUsers = userRepository.findAll().stream()
-                    .filter(u -> usernames.contains(u.getUsername())).toList();
-        } else {
-            // Family member is logged in, find the patients they are connected to
-            List<FamilyConnection> connections = familyService.listConnectionsForFamilyMember(currentUser.getUsername());
-            List<String> userIds = connections.stream().map(FamilyConnection::getUserId).toList();
-            connectedUsers = userRepository.findAllById(userIds);
-        }
-
-        // Return a clean list of user objects
-        List<Map<String, String>> out = connectedUsers.stream()
-                .map(u -> Map.of("id", u.getId(), "username", u.getUsername()))
-                .collect(Collectors.toList());
-
-        return ResponseEntity.ok(out);
+    @PostMapping
+    public FamilyMember addFamilyMember(@RequestBody FamilyMember familyMember, @AuthenticationPrincipal UserDetails currentUser) { // <-- Get the user
+        // Pass the username to the service
+        return familyService.addFamilyMember(familyMember, currentUser.getUsername());
     }
 
-    @PostMapping("/disconnect")
-    public ResponseEntity<?> disconnect(@RequestHeader(value = "X-Username", required = false) String ownerUsername,
-                                        @RequestBody Map<String, String> body) {
-        User owner = userRepository.findByUsername(ownerUsername).orElse(null);
-        if (owner == null) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Owner user not found"));
-        }
+    @GetMapping
+    public List<FamilyMember> getFamilyMembers(@AuthenticationPrincipal UserDetails currentUser) { // <-- Get the user
+        return familyService.getFamilyMembers(currentUser.getUsername());
+    }
 
-        String usernameToDisconnect = body.get("username");
-        if (usernameToDisconnect == null) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Missing username to disconnect"));
-        }
-
-        // Logic to disconnect based on who is the owner
-        if (owner.isAlzheimer()) {
-            familyService.disconnect(owner.getId(), usernameToDisconnect);
-        } else {
-            User patient = userRepository.findByUsername(usernameToDisconnect).orElse(null);
-            if(patient != null) {
-                familyService.disconnect(patient.getId(), owner.getUsername());
-            }
-        }
-
-        return ResponseEntity.ok(Map.of("success", true, "message", "Disconnected"));
+    @DeleteMapping("/{id}")
+    public void deleteFamilyMember(@PathVariable String id) {
+        familyService.deleteFamilyMember(id);
     }
 }

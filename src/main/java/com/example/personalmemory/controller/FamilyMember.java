@@ -11,7 +11,7 @@ public class FamilyMember {
     private String name;
     private String contact; // email/phone
     private String fcmToken; // optional Firebase Cloud Messaging token
-
+    private String userId;
     public FamilyMember() {}
 
     // getters & setters ...
@@ -29,4 +29,11 @@ public class FamilyMember {
 
     public String getFcmToken() { return fcmToken; }
     public void setFcmToken(String fcmToken) { this.fcmToken = fcmToken; }
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
 }
