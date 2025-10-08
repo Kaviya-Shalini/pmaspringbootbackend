@@ -1,0 +1,9 @@
+package com.example.personalmemory.repository;
+
+import com.example.personalmemory.model.Location;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import java.util.Optional;
+
+public interface LocationRepository extends MongoRepository<Location, String> {
+    Optional<Location> findByPatientId(String patientId);
+}
