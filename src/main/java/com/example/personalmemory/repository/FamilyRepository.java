@@ -10,6 +10,9 @@ import java.util.Optional;
 @Repository
 public interface FamilyRepository extends MongoRepository<FamilyConnection, String> {
     List<FamilyConnection> findByUserId(String userId);
+    // Add this new method
+    List<FamilyConnection> findByFamilyUsername(String familyUsername);
     Optional<FamilyConnection> findByUserIdAndFamilyUsername(String userId, String familyUsername);
     void deleteByUserIdAndFamilyUsername(String userId, String familyUsername);
+
 }

@@ -1,6 +1,9 @@
+// in kaviya-shalini/pmaspringbootbackend/pmaspringbootbackend-7fe149d3a1ed8327691014420d2b6aba8592c29e/src/main/java/com/example/personalmemory/controller/FamilyController.java
 package com.example.personalmemory.controller;
 
 import com.example.personalmemory.model.FamilyConnection;
+import com.example.personalmemory.model.User;
+import com.example.personalmemory.repository.UserRepository;
 import com.example.personalmemory.service.FamilyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -8,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/family")
@@ -16,46 +20,88 @@ public class FamilyController {
     @Autowired
     private FamilyService familyService;
 
-    // Connect family member
-    // Expects header "X-Username" = OWNER username or you can pass userId as body
+    @Autowired
+    private UserRepository userRepository; // Inject UserRepository
+
     @PostMapping("/connect")
     public ResponseEntity<?> connect(@RequestHeader(value = "X-Username", required = false) String ownerUsername,
                                      @RequestBody Map<String, String> body) {
-        String userId = body.getOrDefault("userId", ownerUsername);
         String usernameToConnect = body.get("username");
-        if (userId == null || usernameToConnect == null) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Missing userId or username to connect"));
+
+        if (ownerUsername == null || usernameToConnect == null) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Missing username information"));
         }
 
-        FamilyConnection created = familyService.connect(userId, usernameToConnect);
+        // Find the owner user by username to get their actual ID
+        User owner = userRepository.findByUsername(ownerUsername)
+                .orElse(null);
+        if (owner == null) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Owner user not found"));
+        }
+
+        FamilyConnection created = familyService.connect(owner.getId(), usernameToConnect);
         if (created == null) {
-            return ResponseEntity.ok(Map.of("success", true, "message", "Already connected", "data", Map.of("username", usernameToConnect)));
+            return ResponseEntity.ok(Map.of("success", true, "message", "Already connected"));
         }
         return ResponseEntity.ok(Map.of("success", true, "message", "Family member connected", "data", created));
     }
 
-    // List connected family members for a given userId
     @GetMapping("/list")
-    public ResponseEntity<?> list(@RequestHeader(value = "X-Username", required = false) String ownerUsername,
-                                  @RequestParam(value = "userId", required = false) String userIdParam) {
-        String userId = userIdParam != null ? userIdParam : ownerUsername;
-        if (userId == null) return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Missing user identifier"));
+    public ResponseEntity<?> list(@RequestHeader(value = "X-Username", required = false) String ownerUsername) {
+        if (ownerUsername == null) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Missing user identifier"));
+        }
 
-        List<FamilyConnection> list = familyService.listForUser(userId);
-        // transform to minimal info expected by client
-        List<Map<String, String>> out = list.stream().map(fc -> Map.of("id", fc.getId(), "username", fc.getFamilyUsername())).toList();
+        User currentUser = userRepository.findByUsername(ownerUsername).orElse(null);
+        if (currentUser == null) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "User not found"));
+        }
+
+        List<User> connectedUsers;
+        if (currentUser.isAlzheimer()) {
+            // Patient is logged in, find their family members
+            List<FamilyConnection> connections = familyService.listForUser(currentUser.getId());
+            List<String> usernames = connections.stream().map(FamilyConnection::getFamilyUsername).toList();
+            connectedUsers = userRepository.findAll().stream()
+                    .filter(u -> usernames.contains(u.getUsername())).toList();
+        } else {
+            // Family member is logged in, find the patients they are connected to
+            List<FamilyConnection> connections = familyService.listConnectionsForFamilyMember(currentUser.getUsername());
+            List<String> userIds = connections.stream().map(FamilyConnection::getUserId).toList();
+            connectedUsers = userRepository.findAllById(userIds);
+        }
+
+        // Return a clean list of user objects
+        List<Map<String, String>> out = connectedUsers.stream()
+                .map(u -> Map.of("id", u.getId(), "username", u.getUsername()))
+                .collect(Collectors.toList());
+
         return ResponseEntity.ok(out);
     }
 
     @PostMapping("/disconnect")
     public ResponseEntity<?> disconnect(@RequestHeader(value = "X-Username", required = false) String ownerUsername,
                                         @RequestBody Map<String, String> body) {
-        String userId = body.getOrDefault("userId", ownerUsername);
-        String username = body.get("username");
-        if (userId == null || username == null) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Missing userId or username"));
+        User owner = userRepository.findByUsername(ownerUsername).orElse(null);
+        if (owner == null) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Owner user not found"));
         }
-        familyService.disconnect(userId, username);
+
+        String usernameToDisconnect = body.get("username");
+        if (usernameToDisconnect == null) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Missing username to disconnect"));
+        }
+
+        // Logic to disconnect based on who is the owner
+        if (owner.isAlzheimer()) {
+            familyService.disconnect(owner.getId(), usernameToDisconnect);
+        } else {
+            User patient = userRepository.findByUsername(usernameToDisconnect).orElse(null);
+            if(patient != null) {
+                familyService.disconnect(patient.getId(), owner.getUsername());
+            }
+        }
+
         return ResponseEntity.ok(Map.of("success", true, "message", "Disconnected"));
     }
 }

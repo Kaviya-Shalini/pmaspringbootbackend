@@ -24,7 +24,9 @@ public class FamilyService {
     public List<FamilyConnection> listForUser(String userId) {
         return familyRepository.findByUserId(userId);
     }
-
+    public List<FamilyConnection> listConnectionsForFamilyMember(String familyUsername) {
+        return familyRepository.findByFamilyUsername(familyUsername);
+    }
     public void disconnect(String userId, String familyUsername) {
         familyRepository.deleteByUserIdAndFamilyUsername(userId, familyUsername);
     }
