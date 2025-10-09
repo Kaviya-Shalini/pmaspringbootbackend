@@ -33,13 +33,14 @@ public class PhotoContactController {
     // Create contact
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> addContact(
+            @RequestPart("userId") String userId, // <-- Add userId
             @RequestPart("name") String name,
             @RequestPart("relationship") String relationship,
             @RequestPart("phone") String phone,
             @RequestPart(value = "photo", required = false) MultipartFile photo
     ) {
         try {
-            PhotoContact saved = svc.addContact(name, relationship, phone, photo);
+            PhotoContact saved = svc.addContact(userId, name, relationship, phone, photo); // <-- Pass userId
             return ResponseEntity.status(HttpStatus.CREATED).body(mapToResponse(saved));
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to store file"));
@@ -65,13 +66,15 @@ public class PhotoContactController {
     }
 
     // Pagination + search
+
     @GetMapping
     public ResponseEntity<?> getContacts(
+            @RequestParam("userId") String userId, // <-- Add userId
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "") String q
     ) {
-        Page<PhotoContact> p = svc.getContacts(page, size, q);
+        Page<PhotoContact> p = svc.getContacts(userId, page, size, q);
         Map<String, Object> resp = new HashMap<>();
         resp.put("items", p.getContent().stream().map(this::mapToResponse).collect(Collectors.toList()));
         resp.put("total", p.getTotalElements());

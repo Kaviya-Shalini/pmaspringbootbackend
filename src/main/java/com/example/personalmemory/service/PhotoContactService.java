@@ -27,8 +27,9 @@ public class PhotoContactService {
         this.gridFsTemplate = gridFsTemplate;
     }
 
-    public PhotoContact addContact(String name, String relationship, String phone, MultipartFile photo) throws IOException {
+    public PhotoContact addContact(String userId, String name, String relationship, String phone, MultipartFile photo) throws IOException { // <-- Add userId
         PhotoContact p = new PhotoContact();
+        p.setUserId(userId); // <-- Set the userId
         p.setName(name.trim());
         p.setRelationship(relationship.trim());
         p.setPhone(phone.trim());
@@ -66,18 +67,18 @@ public class PhotoContactService {
         return Optional.of(saved);
     }
 
-    public Page<PhotoContact> getContacts(int page, int size, String q) {
+    public Page<PhotoContact> getContacts(String userId, int page, int size, String q) { // <-- Add userId
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt")));
 
         if (q == null || q.trim().isEmpty()) {
-            return repo.findAll(pageable);
+            return repo.findByUserId(userId, pageable); // <-- Use a new repository method
         }
 
         // Prepare a case-insensitive regex for search
         String term = q.trim();
         String regex = "(?i).*" + term + ".*"; // (?i) makes it case-insensitive
 
-        return repo.findByNameRegexOrRelationshipRegexOrPhoneRegex(regex, regex, regex, pageable);
+        return repo.findByUserIdAndNameRegexOrRelationshipRegexOrPhoneRegex(userId, regex, regex, regex, pageable); // <-- Use a new repository method
     }
 
 
