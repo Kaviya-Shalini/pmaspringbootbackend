@@ -4,6 +4,7 @@ import com.example.personalmemory.model.User;
 import com.example.personalmemory.service.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 import java.util.Optional;
@@ -61,6 +62,38 @@ public class AuthController {
             ));
         }
     }
+
+    @PostMapping("/register-face")
+    public ResponseEntity<?> registerFace(@RequestParam("userId") String userId, @RequestParam("face") MultipartFile faceImage) {
+        try {
+            authService.registerFace(userId, faceImage);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Face registered successfully!"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/login-face")
+    public ResponseEntity<?> loginWithFace(@RequestParam("face") MultipartFile faceImage) {
+        try {
+            Optional<User> userOpt = authService.loginWithFace(faceImage);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "message", "Login successful!",
+                        "userId", user.getId(),
+                        "quickQuestionAnswered", user.isQuickQuestionAnswered()
+                ));
+            } else {
+                return ResponseEntity.status(401).body(Map.of("success", false, "message", "Face not recognized."));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Could not process face login."));
+        }
+    }
+
+
     @DeleteMapping("/user/{userId}")
     public ResponseEntity<?> deleteAccount(@PathVariable String userId) {
         boolean deleted = authService.deleteUser(userId);

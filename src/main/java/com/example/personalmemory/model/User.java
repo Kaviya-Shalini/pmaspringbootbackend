@@ -13,6 +13,8 @@ public class User {
     private boolean isAlzheimer = false; // default false
     private String encryptionKey;
     private boolean quickQuestionAnswered = false;
+    private String faceImage; // Path to the stored face image
+
     public User() {}
 
     public User(String username, String passwordHash) {
@@ -36,4 +38,7 @@ public class User {
     public void setEncryptionKey(String encryptionKey) { this.encryptionKey = encryptionKey; }
     public boolean isQuickQuestionAnswered() { return quickQuestionAnswered; }
     public void setQuickQuestionAnswered(boolean quickQuestionAnswered) { this.quickQuestionAnswered = quickQuestionAnswered; }
+
+    public String getFaceImage() { return faceImage; }
+    public void setFaceImage(String faceImage) { this.faceImage = faceImage; }
 }

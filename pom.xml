@@ -45,7 +45,11 @@
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-messaging</artifactId>
 		</dependency>
-
+		<dependency>
+			<groupId>org.bytedeco</groupId>
+			<artifactId>javacv-platform</artifactId>
+			<version>1.5.7</version>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
