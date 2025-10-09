@@ -1,30 +1,33 @@
 package com.example.personalmemory.service;
 
-
-import com.example.personalmemory.model.FamilyMember;
-import com.example.personalmemory.repository.FamilyMemberRepository;
+import com.example.personalmemory.model.FamilyConnection;
+import com.example.personalmemory.repository.FamilyRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 
 @Service
 public class FamilyService {
+    @Autowired
+    private FamilyRepository familyRepository;
 
-    private final FamilyMemberRepository familyMemberRepository;
-
-    public FamilyService(FamilyMemberRepository familyMemberRepository) {
-        this.familyMemberRepository = familyMemberRepository;
+    public FamilyConnection connect(String userId, String familyUsername) {
+        // prevent duplicates
+        if (familyRepository.findByUserIdAndFamilyUsername(userId, familyUsername).isPresent()) {
+            return null;
+        }
+        FamilyConnection fc = new FamilyConnection(userId, familyUsername);
+        return familyRepository.save(fc);
     }
 
-    public FamilyMember addFamilyMember(FamilyMember familyMember, String userId) { // <-- Add userId
-        familyMember.setUserId(userId); // <-- Set the userId
-        return familyMemberRepository.save(familyMember);
+    public List<FamilyConnection> listForUser(String userId) {
+        return familyRepository.findByUserId(userId);
     }
-
-    public List<FamilyMember> getFamilyMembers(String userId) {
-        return familyMemberRepository.findByUserId(userId);
+    public List<FamilyConnection> listConnectionsForFamilyMember(String familyUsername) {
+        return familyRepository.findByFamilyUsername(familyUsername);
     }
-
-    public void deleteFamilyMember(String id) {
-        familyMemberRepository.deleteById(id);
+    public void disconnect(String userId, String familyUsername) {
+        familyRepository.deleteByUserIdAndFamilyUsername(userId, familyUsername);
     }
 }

@@ -1,14 +1,12 @@
 package com.example.personalmemory.controller;
 
-import com.example.personalmemory.model.EmergencyContact;
+import com.example.personalmemory.model.PhotoContact;
 import com.example.personalmemory.service.EmergencyContactService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.mongodb.gridfs.GridFsResource;
 import org.springframework.http.*;
-import org.springframework.security.core.annotation.AuthenticationPrincipal; // <-- Import this
-import org.springframework.security.core.userdetails.UserDetails; // <-- And this
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -34,12 +32,10 @@ public class EmergencyContactController {
             @RequestPart("name") String name,
             @RequestPart("relationship") String relationship,
             @RequestPart("phone") String phone,
-            @RequestPart(value = "photo", required = false) MultipartFile photo,
-            @AuthenticationPrincipal UserDetails currentUser // <-- Get the authenticated user
+            @RequestPart(value = "photo", required = false) MultipartFile photo
     ) {
         try {
-            // Now, pass the username (or user ID) to the service
-            EmergencyContact saved = svc.addContact(name, relationship, phone, photo, currentUser.getUsername());
+            PhotoContact saved = svc.addContact(name, relationship, phone, photo);
             return ResponseEntity.status(HttpStatus.CREATED).body(mapToResponse(saved));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
@@ -71,7 +67,7 @@ public class EmergencyContactController {
             @RequestParam(defaultValue = "5") int size,
             @RequestParam(defaultValue = "") String q
     ) {
-        Page<EmergencyContact> p = svc.getContacts(page, size, q);
+        Page<PhotoContact> p = svc.getContacts(page, size, q);
         Map<String, Object> resp = new HashMap<>();
         resp.put("items", p.getContent().stream().map(this::mapToResponse).collect(Collectors.toList()));
         resp.put("total", p.getTotalElements());
@@ -102,7 +98,7 @@ public class EmergencyContactController {
         return ResponseEntity.noContent().build();
     }
 
-    private Map<String, Object> mapToResponse(EmergencyContact c) {
+    private Map<String, Object> mapToResponse(PhotoContact c) {
         Map<String, Object> m = new HashMap<>();
         m.put("id", c.getId());
         m.put("name", c.getName());
@@ -111,7 +107,6 @@ public class EmergencyContactController {
         m.put("createdAt", c.getCreatedAt() != null ? c.getCreatedAt().toString() : Instant.now().toString());
         String baseUrl = "http://localhost:8080";
         m.put("photoUrl", c.getPhotoFileId() != null ? baseUrl + "/api/emergencycontacts/photo/" + c.getPhotoFileId() : null);
-
         return m;
     }
 }

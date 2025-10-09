@@ -1,3 +1,4 @@
+// in kaviya-shalini/pmaspringbootbackend/pmaspringbootbackend-7fe149d3a1ed8327691014420d2b6aba8592c29e/src/main/java/com/example/personalmemory/repository/FamilyRepository.java
 package com.example.personalmemory.repository;
 
 import com.example.personalmemory.model.FamilyConnection;
@@ -14,5 +15,4 @@ public interface FamilyRepository extends MongoRepository<FamilyConnection, Stri
     List<FamilyConnection> findByFamilyUsername(String familyUsername);
     Optional<FamilyConnection> findByUserIdAndFamilyUsername(String userId, String familyUsername);
     void deleteByUserIdAndFamilyUsername(String userId, String familyUsername);
-    void deleteByUserId(String userId);
 }

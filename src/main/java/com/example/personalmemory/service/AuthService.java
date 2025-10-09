@@ -75,7 +75,7 @@ public class AuthService {
         photoContactRepository.deleteByUserId(userId);
         photoEntryRepository.deleteByOwnerId(userId);
         locationRepository.deleteByUserId(userId);
-        familyRepository.deleteByUserId(userId);
+       // familyRepository.deleteByUserId(userId);
         familyMemberRepository.deleteByUserId(userId);
         alertRepository.deleteByUserId(userId);
         chatRepository.deleteByUserId(userId);
