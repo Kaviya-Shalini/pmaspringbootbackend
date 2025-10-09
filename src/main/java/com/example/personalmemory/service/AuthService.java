@@ -1,5 +1,5 @@
 package com.example.personalmemory.service;
-
+import org.json.JSONObject;
 import com.example.personalmemory.model.User;
 import com.example.personalmemory.repository.*;
 import org.bytedeco.opencv.opencv_core.Mat;
@@ -43,8 +43,32 @@ public class AuthService {
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
     private final String UPLOAD_DIR = "./uploads/faces/";
 
-    // Load pre-trained Haar cascade for face detection
-    private final CascadeClassifier faceDetector = new CascadeClassifier("haarcascade_frontalface_default.xml");
+    private final CascadeClassifier faceDetector;
+
+    public AuthService() {
+        try {
+            // ✅ Load from classpath (inside src/main/resources)
+            var inputStream = getClass().getResourceAsStream("/haarcascade_frontalface_default.xml");
+            if (inputStream == null) {
+                throw new RuntimeException("Haar cascade file not found in resources!");
+            }
+
+            // ✅ Copy to a temporary file (OpenCV needs a real path)
+            File tempFile = File.createTempFile("haarcascade_frontalface_default", ".xml");
+            tempFile.deleteOnExit();
+            java.nio.file.Files.copy(inputStream, tempFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            // ✅ Load into OpenCV
+            this.faceDetector = new CascadeClassifier(tempFile.getAbsolutePath());
+            if (this.faceDetector.empty()) {
+                throw new RuntimeException("Failed to load Haar cascade from temp file: " + tempFile.getAbsolutePath());
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException("Error loading Haar cascade file", e);
+        }
+    }
+
 
     // ---------------- BASIC AUTH ----------------
 
@@ -145,28 +169,40 @@ public class AuthService {
 
     // ---------------- FACE UTILS ----------------
 
-    /** Extract embedding (mock FaceNet style). Replace with real model in production. */
     private float[] extractFaceEmbedding(Mat img) {
-        if (img.empty()) return null;
+        try {
+            // Save temporary image
+            File tempFile = File.createTempFile("face-temp", ".jpg");
+            opencv_imgcodecs.imwrite(tempFile.getAbsolutePath(), img);
 
-        // Detect face region
-        var faces = new org.bytedeco.opencv.opencv_core.RectVector();
-        faceDetector.detectMultiScale(img, faces);
+            // Send to Python DeepFace API
+            var url = "http://127.0.0.1:5001/embed";
+            var client = java.net.http.HttpClient.newHttpClient();
 
-        if (faces.size() == 0) return null;
+            var request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create(url))
+                    .header("Content-Type", "application/octet-stream")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofFile(tempFile.toPath()))
+                    .build();
 
-        org.bytedeco.opencv.opencv_core.Rect faceRect = faces.get(0);
-        Mat face = new Mat(img, faceRect);
+            var response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+            tempFile.delete();
 
-        resize(face, face, new org.bytedeco.opencv.opencv_core.Size(160, 160));
+            // Parse returned JSON: {"embedding": [0.123, -0.456, ...]}
+            JSONObject json = new JSONObject(response.body());
 
-        // For demo: generate a pseudo-embedding (you can plug in FaceNet here)
-        float[] embedding = new float[128];
-        Random r = new Random();
-        for (int i = 0; i < 128; i++) embedding[i] = (float) (face.ptr(i % face.rows()).get() & 0xFF) / 255.0f + r.nextFloat() * 0.01f;
-
-        return embedding;
+            var arr = json.getJSONArray("embedding");
+            float[] embedding = new float[arr.length()];
+            for (int i = 0; i < arr.length(); i++) {
+                embedding[i] = (float) arr.getDouble(i);
+            }
+            return embedding;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
+
 
     private float[] parseEmbedding(String embeddingStr) {
         String[] parts = embeddingStr.replaceAll("[\\[\\]]", "").split(",");

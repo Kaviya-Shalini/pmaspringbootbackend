@@ -51,6 +51,12 @@
 			<version>1.5.8</version>
 		</dependency>
 		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20231013</version>
+		</dependency>
+
+		<dependency>
 			<groupId>org.bytedeco</groupId>
 			<artifactId>tensorflow-platform</artifactId>
 			<version>1.15.5-1.5.8</version>

@@ -64,11 +64,14 @@ public class AuthController {
     }
 
     @PostMapping("/register-face")
-    public ResponseEntity<?> registerFace(@RequestParam("userId") String userId, @RequestParam("face") MultipartFile faceImage) {
+    public ResponseEntity<?> registerFace(
+            @RequestParam("userId") String userId,
+            @RequestParam("face") MultipartFile faceImage) {
         try {
             authService.registerFace(userId, faceImage);
-            return ResponseEntity.ok(Map.of("success", true, "message", "Face registered successfully!"));
+            return ResponseEntity.ok().body(Map.of("success", true, "message", "Face registered successfully"));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         }
     }
@@ -76,23 +79,23 @@ public class AuthController {
     @PostMapping("/login-face")
     public ResponseEntity<?> loginWithFace(@RequestParam("face") MultipartFile faceImage) {
         try {
-            Optional<User> userOpt = authService.loginWithFace(faceImage);
+            var userOpt = authService.loginWithFace(faceImage);
             if (userOpt.isPresent()) {
-                User user = userOpt.get();
-                return ResponseEntity.ok(Map.of(
+                var user = userOpt.get();
+                return ResponseEntity.ok().body(Map.of(
                         "success", true,
-                        "message", "Login successful!",
+                        "message", "Face login successful",
                         "userId", user.getId(),
                         "quickQuestionAnswered", user.isQuickQuestionAnswered()
                 ));
             } else {
-                return ResponseEntity.status(401).body(Map.of("success", false, "message", "Face not recognized."));
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Face not recognized"));
             }
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Could not process face login."));
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         }
     }
-
 
     @DeleteMapping("/user/{userId}")
     public ResponseEntity<?> deleteAccount(@PathVariable String userId) {
