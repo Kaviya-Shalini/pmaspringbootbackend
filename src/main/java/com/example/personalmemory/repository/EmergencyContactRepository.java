@@ -9,4 +9,8 @@ public interface EmergencyContactRepository extends MongoRepository<EmergencyCon
     Page<EmergencyContact> findByNameRegexOrRelationshipRegexOrPhoneRegex(
             String nameRegex, String relRegex, String phoneRegex, Pageable pageable);
     void deleteByUserId(String userId);
+
+    Page<EmergencyContact> findByUserId(String userId, Pageable pageable);
+
+    Page<EmergencyContact> findByUserIdAndNameContainingIgnoreCase(String userId, String q, Pageable pageable);
 }

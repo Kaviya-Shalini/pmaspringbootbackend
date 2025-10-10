@@ -11,4 +11,6 @@ public interface PhotoEntryRepository extends MongoRepository<PhotoEntry, String
     void deleteByUserId(String userId);
     @Query("{ 'ownerId' : ?0 }")
     void deleteByOwnerId(String ownerId);
+   // Fetch photos by userId
+    Page<PhotoEntry> findByUserId(String userId, Pageable pageable);
 }

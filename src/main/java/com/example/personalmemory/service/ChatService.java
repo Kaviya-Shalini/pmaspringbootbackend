@@ -18,9 +18,14 @@ public class ChatService {
         return chatRepository.save(msg);
     }
 
-    // returns and does NOT delete: list of messages sent TO username
+    // returns unread messages and marks them as read
     public List<ChatMessage> receiveFor(String username) {
-        return chatRepository.findByToUserAndDeletedFalseOrderByCreatedAtAsc(username);
+        List<ChatMessage> unread = chatRepository.findByToUserAndDeletedFalseAndReadFalseOrderByCreatedAtAsc(username);
+        for (ChatMessage msg : unread) {
+            msg.setRead(true); // 👈 mark as read once delivered
+        }
+        chatRepository.saveAll(unread);
+        return unread;
     }
 
     public void deleteMessageByContent(String ownerUsername, String otherUsername, String message, Date createdAt) {

@@ -30,22 +30,24 @@ public class PhotoContactController {
         this.svc = svc;
     }
 
-    // Create contact
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> addContact(
-            @RequestPart("userId") String userId, // <-- Add userId
+            @RequestParam("userId") String userId,
             @RequestPart("name") String name,
             @RequestPart("relationship") String relationship,
             @RequestPart("phone") String phone,
             @RequestPart(value = "photo", required = false) MultipartFile photo
     ) {
         try {
-            PhotoContact saved = svc.addContact(userId, name, relationship, phone, photo); // <-- Pass userId
+            PhotoContact saved = svc.addContact(userId, name, relationship, phone, photo);
             return ResponseEntity.status(HttpStatus.CREATED).body(mapToResponse(saved));
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to store file"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to store file"));
         }
     }
+
+
 
     // Update contact
     @PutMapping(path = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -66,15 +68,13 @@ public class PhotoContactController {
     }
 
     // Pagination + search
-
     @GetMapping
     public ResponseEntity<?> getContacts(
-            @RequestParam("userId") String userId, // <-- Add userId
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "") String q
     ) {
-        Page<PhotoContact> p = svc.getContacts(userId, page, size, q);
+        Page<PhotoContact> p = svc.getContacts(page, size, q);
         Map<String, Object> resp = new HashMap<>();
         resp.put("items", p.getContent().stream().map(this::mapToResponse).collect(Collectors.toList()));
         resp.put("total", p.getTotalElements());
@@ -126,4 +126,21 @@ public class PhotoContactController {
         }
         return m;
     }
+    // ✅ Fetch contacts by userId (with optional search)
+    @GetMapping("/by-user/{userId}")
+    public ResponseEntity<?> getContactsByUser(
+            @PathVariable String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String q
+    ) {
+        Page<PhotoContact> p = svc.getContactsByUser(userId, page, size, q);
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("items", p.getContent().stream().map(this::mapToResponse).collect(Collectors.toList()));
+        resp.put("total", p.getTotalElements());
+        resp.put("page", p.getNumber());
+        resp.put("size", p.getSize());
+        return ResponseEntity.ok(resp);
+    }
+
 }

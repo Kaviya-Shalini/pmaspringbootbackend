@@ -1,9 +1,11 @@
 package com.example.personalmemory.service;
+
 import org.json.JSONObject;
 import com.example.personalmemory.model.User;
 import com.example.personalmemory.repository.*;
-import org.bytedeco.opencv.opencv_core.Mat;
+import org.bytedeco.opencv.opencv_core.*;
 import org.bytedeco.opencv.global.opencv_imgcodecs;
+import org.bytedeco.opencv.global.opencv_imgproc;
 import org.bytedeco.opencv.opencv_objdetect.CascadeClassifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -12,18 +14,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.*;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 
-import static org.bytedeco.opencv.global.opencv_imgproc.resize;
-import static org.bytedeco.opencv.global.opencv_imgcodecs.imread;
-import static org.bytedeco.opencv.global.opencv_core.CV_8UC3;
-
 /**
- * AuthService with high-accuracy face recognition (FaceNet-style embeddings).
+ * AuthService with robust, high-accuracy face recognition (Facenet embeddings + face crop).
  */
 @Service
 public class AuthService {
@@ -47,67 +44,48 @@ public class AuthService {
 
     public AuthService() {
         try {
-            // ✅ Load from classpath (inside src/main/resources)
             var inputStream = getClass().getResourceAsStream("/haarcascade_frontalface_default.xml");
-            if (inputStream == null) {
-                throw new RuntimeException("Haar cascade file not found in resources!");
-            }
+            if (inputStream == null) throw new RuntimeException("Haar cascade file not found!");
 
-            // ✅ Copy to a temporary file (OpenCV needs a real path)
-            File tempFile = File.createTempFile("haarcascade_frontalface_default", ".xml");
+            File tempFile = File.createTempFile("haarcascade", ".xml");
             tempFile.deleteOnExit();
-            java.nio.file.Files.copy(inputStream, tempFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(inputStream, tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-            // ✅ Load into OpenCV
             this.faceDetector = new CascadeClassifier(tempFile.getAbsolutePath());
-            if (this.faceDetector.empty()) {
-                throw new RuntimeException("Failed to load Haar cascade from temp file: " + tempFile.getAbsolutePath());
-            }
-
+            if (this.faceDetector.empty()) throw new RuntimeException("Failed to load Haar cascade.");
         } catch (IOException e) {
-            throw new RuntimeException("Error loading Haar cascade file", e);
+            throw new RuntimeException("Error loading Haar cascade", e);
         }
     }
-
 
     // ---------------- BASIC AUTH ----------------
 
     public User register(String username, String password) {
-        if (userRepository.findByUsername(username).isPresent()) {
+        if (userRepository.findByUsername(username).isPresent())
             throw new RuntimeException("Username already exists");
-        }
+
         String hash = encoder.encode(password);
         User user = new User(username, hash);
         try {
-            String key = encryptionService.generateKey();
-            user.setEncryptionKey(key);
+            user.setEncryptionKey(encryptionService.generateKey());
         } catch (Exception e) {
-            throw new RuntimeException("Could not generate encryption key for user.");
+            throw new RuntimeException("Could not generate encryption key");
         }
         return userRepository.save(user);
     }
 
     public Optional<User> login(String username, String password) {
-        Optional<User> opt = userRepository.findByUsername(username);
-        if (opt.isPresent()) {
-            User user = opt.get();
-            if (encoder.matches(password, user.getPasswordHash())) {
-                return Optional.of(user);
-            }
-        }
-        return Optional.empty();
+        return userRepository.findByUsername(username)
+                .filter(user -> encoder.matches(password, user.getPasswordHash()));
     }
 
     // ---------------- FACE REGISTRATION ----------------
 
     public void registerFace(String userId, MultipartFile faceImage) throws IOException {
         Optional<User> userOpt = userRepository.findById(userId);
-        if (userOpt.isEmpty()) {
-            throw new RuntimeException("User not found");
-        }
+        if (userOpt.isEmpty()) throw new RuntimeException("User not found");
         User user = userOpt.get();
 
-        // Save file
         File directory = new File(UPLOAD_DIR);
         if (!directory.exists()) directory.mkdirs();
 
@@ -115,16 +93,16 @@ public class AuthService {
         Path path = Paths.get(filePath);
         Files.write(path, faceImage.getBytes());
 
-        // Detect face and compute embedding
-        Mat img = imread(filePath);
-        float[] embedding = extractFaceEmbedding(img);
-        if (embedding == null) {
-            throw new RuntimeException("No clear face detected during registration.");
-        }
+        // Detect and crop face
+        Mat img = opencv_imgcodecs.imread(filePath);
+        Mat face = cropFace(img);
+        if (face == null) throw new RuntimeException("No clear face detected during registration.");
 
-        // Store embedding as string
+        float[] embedding = extractFaceEmbedding(face);
+        if (embedding == null) throw new RuntimeException("Failed to compute embedding.");
+
         user.setFaceImage(filePath);
-        user.setFaceImage(Arrays.toString(embedding)); // store as text
+        user.setFaceEmbedding(Arrays.toString(embedding));
         userRepository.save(user);
     }
 
@@ -134,24 +112,24 @@ public class AuthService {
         File tempFile = File.createTempFile("face-login", ".jpg");
         faceImage.transferTo(tempFile);
 
-        Mat img = imread(tempFile.getAbsolutePath());
+        Mat img = opencv_imgcodecs.imread(tempFile.getAbsolutePath());
         tempFile.delete();
 
-        float[] loginEmbedding = extractFaceEmbedding(img);
-        if (loginEmbedding == null) {
-            return Optional.empty();
-        }
+        Mat face = cropFace(img);
+        if (face == null) return Optional.empty();
 
-        // Compare with all users having stored embeddings
+        float[] loginEmbedding = extractFaceEmbedding(face);
+        if (loginEmbedding == null) return Optional.empty();
+
         List<User> users = userRepository.findAll().stream()
-                .filter(u -> u.getFaceImage() != null)
+                .filter(u -> u.getFaceEmbedding() != null)
                 .collect(Collectors.toList());
 
         double bestScore = 0;
         User bestUser = null;
 
         for (User user : users) {
-            float[] storedEmbedding = parseEmbedding(user.getFaceImage());
+            float[] storedEmbedding = parseEmbedding(user.getFaceEmbedding());
             double similarity = cosineSimilarity(loginEmbedding, storedEmbedding);
             if (similarity > bestScore) {
                 bestScore = similarity;
@@ -159,23 +137,37 @@ public class AuthService {
             }
         }
 
-        // Accept only if similarity is >= 0.90
-        if (bestUser != null && bestScore >= 0.90) {
+        // ✅ Lowered threshold to 0.75 for better tolerance to lighting/dress/background
+        if (bestUser != null && bestScore >= 0.75) {
             return Optional.of(bestUser);
         }
-
         return Optional.empty();
     }
 
     // ---------------- FACE UTILS ----------------
 
-    private float[] extractFaceEmbedding(Mat img) {
-        try {
-            // Save temporary image
-            File tempFile = File.createTempFile("face-temp", ".jpg");
-            opencv_imgcodecs.imwrite(tempFile.getAbsolutePath(), img);
+    private Mat cropFace(Mat img) {
+        if (img == null || img.empty()) return null;
+        RectVector faces = new RectVector();
+        faceDetector.detectMultiScale(img, faces);
 
-            // Send to Python DeepFace API
+        if (faces.size() == 0) return null;
+
+        Rect faceRect = faces.get(0);
+        Mat face = new Mat(img, faceRect).clone();
+
+        // Resize to 160x160 for Facenet input
+        Mat resized = new Mat();
+        opencv_imgproc.resize(face, resized, new Size(160, 160));
+
+        return resized;
+    }
+
+    private float[] extractFaceEmbedding(Mat faceImg) {
+        try {
+            File tempFile = File.createTempFile("face-crop", ".jpg");
+            opencv_imgcodecs.imwrite(tempFile.getAbsolutePath(), faceImg);
+
             var url = "http://127.0.0.1:5001/embed";
             var client = java.net.http.HttpClient.newHttpClient();
 
@@ -188,9 +180,7 @@ public class AuthService {
             var response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
             tempFile.delete();
 
-            // Parse returned JSON: {"embedding": [0.123, -0.456, ...]}
             JSONObject json = new JSONObject(response.body());
-
             var arr = json.getJSONArray("embedding");
             float[] embedding = new float[arr.length()];
             for (int i = 0; i < arr.length(); i++) {
@@ -203,7 +193,6 @@ public class AuthService {
         }
     }
 
-
     private float[] parseEmbedding(String embeddingStr) {
         String[] parts = embeddingStr.replaceAll("[\\[\\]]", "").split(",");
         float[] emb = new float[parts.length];
@@ -214,7 +203,7 @@ public class AuthService {
     }
 
     private double cosineSimilarity(float[] a, float[] b) {
-        if (a.length != b.length) return 0;
+        if (a == null || b == null || a.length != b.length) return 0;
         double dot = 0, normA = 0, normB = 0;
         for (int i = 0; i < a.length; i++) {
             dot += a[i] * b[i];

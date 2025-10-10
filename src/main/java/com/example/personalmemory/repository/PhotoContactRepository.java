@@ -12,7 +12,6 @@ public interface PhotoContactRepository extends MongoRepository<PhotoContact, St
     void deleteByUserId(String userId);
     Page<PhotoContact> findByUserId(String userId, Pageable pageable);
 
-    @Query("{'userId': ?0, '$or': [{'name': {$regex: ?1}}, {'relationship': {$regex: ?2}}, {'phone': {$regex: ?3}}]}")
-    Page<PhotoContact> findByUserIdAndNameRegexOrRelationshipRegexOrPhoneRegex(String userId, String nameRegex, String relationshipRegex, String phoneRegex, Pageable pageable);
+    Page<PhotoContact> findByUserIdAndNameContainingIgnoreCase(String userId, String name, Pageable pageable);
 
 }

@@ -28,10 +28,11 @@ public class PhotoEntryService {
     }
 
     // Add new photo
-    public PhotoEntry addPhoto(String caption, MultipartFile photo) throws IOException {
+    public PhotoEntry addPhoto(String caption, MultipartFile photo, String userId) throws IOException {
         PhotoEntry entry = new PhotoEntry();
         entry.setCaption(caption != null ? caption.trim() : "");
         entry.setCreatedAt(Instant.now());
+        entry.setUserId(userId); // <-- store userId
 
         if (photo != null && !photo.isEmpty()) {
             ObjectId fileId = gridFsTemplate.store(photo.getInputStream(), photo.getOriginalFilename(), photo.getContentType());
@@ -40,6 +41,7 @@ public class PhotoEntryService {
 
         return repo.save(entry);
     }
+
 
     // Update photo
     public Optional<PhotoEntry> updatePhoto(String id, String caption, MultipartFile photo) throws IOException {
@@ -50,7 +52,6 @@ public class PhotoEntryService {
         if (caption != null) entry.setCaption(caption.trim());
 
         if (photo != null && !photo.isEmpty()) {
-            // Delete previous photo from GridFS
             if (entry.getPhotoFileId() != null) {
                 gridFsTemplate.delete(org.springframework.data.mongodb.core.query.Query.query(
                         org.springframework.data.mongodb.core.query.Criteria.where("_id").is(new ObjectId(entry.getPhotoFileId()))
@@ -85,6 +86,12 @@ public class PhotoEntryService {
 
         String regex = ".*" + search.trim() + ".*";
         return repo.findByCaptionRegexIgnoreCase(regex, pageable);
+    }
+
+    // ✅ Fetch photos by logged-in user only
+    public Page<PhotoEntry> getPhotosByUser(String userId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt")));
+        return repo.findByUserId(userId, pageable);
     }
 
     // Get photo GridFS resource by fileId

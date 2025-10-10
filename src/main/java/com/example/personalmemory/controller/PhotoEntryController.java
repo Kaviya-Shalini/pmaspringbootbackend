@@ -34,16 +34,18 @@ public class PhotoEntryController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> addPhoto(
             @RequestParam(required = false) String caption,
-            @RequestParam(required = false) MultipartFile photo
+            @RequestParam(required = false) MultipartFile photo,
+            @RequestParam String userId // <-- add this
     ) {
         try {
-            PhotoEntry saved = service.addPhoto(caption, photo);
+            PhotoEntry saved = service.addPhoto(caption, photo, userId); // pass userId
             return ResponseEntity.status(HttpStatus.CREATED).body(toDto(saved));
         } catch (IOException ex) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to store file"));
         }
     }
+
 
     // Update photo (multipart/form-data)
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -139,4 +141,26 @@ public class PhotoEntryController {
         }
         return m;
     }
+    // Fetch photos for a specific logged-in user
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<Map<String, Object>> getUserPhotos(
+            @PathVariable String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "6") int size
+    ) {
+        Page<PhotoEntry> p = service.getPhotosByUser(userId, page, size);
+
+        List<Map<String, Object>> items = p.getContent().stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", items);
+        response.put("total", p.getTotalElements());
+        response.put("page", p.getNumber());
+        response.put("size", p.getSize());
+
+        return ResponseEntity.ok(response);
+    }
+
 }

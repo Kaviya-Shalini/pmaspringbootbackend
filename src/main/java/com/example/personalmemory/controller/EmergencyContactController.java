@@ -1,6 +1,6 @@
 package com.example.personalmemory.controller;
 
-import com.example.personalmemory.model.PhotoContact;
+import com.example.personalmemory.model.EmergencyContact;
 import com.example.personalmemory.service.EmergencyContactService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
@@ -29,18 +29,21 @@ public class EmergencyContactController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> addContact(
+            @RequestPart("userId") String userId,
             @RequestPart("name") String name,
             @RequestPart("relationship") String relationship,
             @RequestPart("phone") String phone,
             @RequestPart(value = "photo", required = false) MultipartFile photo
     ) {
         try {
-            PhotoContact saved = svc.addContact(name, relationship, phone, photo);
+            EmergencyContact saved = svc.addContact(userId, name, relationship, phone, photo);
             return ResponseEntity.status(HttpStatus.CREATED).body(mapToResponse(saved));
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to store photo"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to store contact photo"));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -55,9 +58,11 @@ public class EmergencyContactController {
         try {
             return svc.updateContact(id, name, relationship, phone, photo)
                     .map(c -> ResponseEntity.ok(mapToResponse(c)))
-                    .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Contact not found")));
+                    .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                            .body(Map.of("error", "Contact not found")));
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to update contact"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to update contact"));
         }
     }
 
@@ -67,7 +72,7 @@ public class EmergencyContactController {
             @RequestParam(defaultValue = "5") int size,
             @RequestParam(defaultValue = "") String q
     ) {
-        Page<PhotoContact> p = svc.getContacts(page, size, q);
+        Page<EmergencyContact> p = svc.getContacts(page, size, q);
         Map<String, Object> resp = new HashMap<>();
         resp.put("items", p.getContent().stream().map(this::mapToResponse).collect(Collectors.toList()));
         resp.put("total", p.getTotalElements());
@@ -88,7 +93,8 @@ public class EmergencyContactController {
             headers.setContentLength(res.contentLength());
             return new ResponseEntity<>(new InputStreamResource(res.getInputStream()), headers, HttpStatus.OK);
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Cannot read file"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Cannot read file"));
         }
     }
 
@@ -98,7 +104,7 @@ public class EmergencyContactController {
         return ResponseEntity.noContent().build();
     }
 
-    private Map<String, Object> mapToResponse(PhotoContact c) {
+    private Map<String, Object> mapToResponse(EmergencyContact c) {
         Map<String, Object> m = new HashMap<>();
         m.put("id", c.getId());
         m.put("name", c.getName());
@@ -108,5 +114,21 @@ public class EmergencyContactController {
         String baseUrl = "http://localhost:8080";
         m.put("photoUrl", c.getPhotoFileId() != null ? baseUrl + "/api/emergencycontacts/photo/" + c.getPhotoFileId() : null);
         return m;
+    }
+
+    @GetMapping("/emergency/{userId}")
+    public ResponseEntity<?> getContactsByUser(
+            @PathVariable String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String q
+    ) {
+        Page<EmergencyContact> p = svc.getContactsByUser(userId, page, size, q);
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("items", p.getContent().stream().map(this::mapToResponse).collect(Collectors.toList()));
+        resp.put("total", p.getTotalElements());
+        resp.put("page", p.getNumber());
+        resp.put("size", p.getSize());
+        return ResponseEntity.ok(resp);
     }
 }

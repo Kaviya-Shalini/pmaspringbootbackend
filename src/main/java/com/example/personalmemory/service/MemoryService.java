@@ -202,27 +202,14 @@ public class MemoryService {
         }
     }
 
-    // in kaviya-shalini/pmaspringbootbackend/pmaspringbootbackend-1d87d4012b9e820e43fce3354280658357151b4a/src/main/java/com/example/personalmemory/service/MemoryService.java
     public Page<Addmemory> getAllMemoriesByUser(String userId, Pageable pageable, String search) {
-        User user = userRepository.findById(userId).orElse(null);
-        boolean isPatient = user != null && user.isAlzheimer();
-
-        // If the user is a patient, they see all their memories.
-        // If the user is a family member, they only see the patient's memories that have the isAlzheimer flag set to true.
         if (search == null || search.isBlank()) {
-            if (isPatient) {
-                return memoryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
-            } else {
-                return memoryRepository.findByUserIdAndIsAlzheimerOrderByCreatedAtDesc(userId, true, pageable);
-            }
+            return memoryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
         } else {
-            if (isPatient) {
-                return memoryRepository.findByUserIdAndSearchTerm(userId, search, pageable);
-            } else {
-                return memoryRepository.findByUserIdAndIsAlzheimerAndSearchTerm(userId, true, search, pageable);
-            }
+            return memoryRepository.findByUserIdAndSearchTerm(userId, search, pageable);
         }
     }
+
 
 
 }

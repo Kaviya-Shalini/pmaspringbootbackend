@@ -9,13 +9,15 @@ import java.util.Date;
 public class ChatMessage {
     @Id
     private String id;
-
-    private String fromUser;    // sender username
-    private String toUser;      // recipient username
+    private String fromUser;
+    private String toUser;
     private String message;
     private Date createdAt;
     private boolean deleted = false;
+
+    private boolean read = false;  // 👈 NEW FIELD
     private String userId;
+
     public ChatMessage() {}
 
     public ChatMessage(String fromUser, String toUser, String message, Date createdAt) {
@@ -23,7 +25,13 @@ public class ChatMessage {
         this.toUser = toUser;
         this.message = message;
         this.createdAt = createdAt;
+        this.read = false;  // default unread
     }
+
+    // Getters & Setters
+    public boolean isRead() { return read; }
+    public void setRead(boolean read) { this.read = read; }
+
 
     // getters / setters
     public String getId() { return id; }

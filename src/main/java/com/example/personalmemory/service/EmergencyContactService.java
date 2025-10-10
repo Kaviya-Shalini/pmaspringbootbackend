@@ -1,9 +1,7 @@
 package com.example.personalmemory.service;
 
-
-import com.example.personalmemory.model.PhotoContact;
-
-import com.example.personalmemory.repository.PhotoContactRepository;
+import com.example.personalmemory.model.EmergencyContact;
+import com.example.personalmemory.repository.EmergencyContactRepository;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
@@ -23,21 +21,22 @@ import static org.springframework.data.mongodb.core.query.Criteria.where;
 @Service
 public class EmergencyContactService {
 
-    private final PhotoContactRepository repo;
+    private final EmergencyContactRepository repo;
     private final GridFsTemplate gridFsTemplate;
 
     @Autowired
-    public EmergencyContactService(PhotoContactRepository repo, GridFsTemplate gridFsTemplate) {
+    public EmergencyContactService(EmergencyContactRepository repo, GridFsTemplate gridFsTemplate) {
         this.repo = repo;
         this.gridFsTemplate = gridFsTemplate;
     }
 
-    public PhotoContact addContact(String name, String relationship, String phone, MultipartFile photo) throws IOException {
+    public EmergencyContact addContact(String userId, String name, String relationship, String phone, MultipartFile photo) throws IOException {
         if (repo.count() >= 5) {
             throw new IllegalStateException("Maximum 5 emergency contacts allowed.");
         }
 
-        PhotoContact c = new PhotoContact();
+        EmergencyContact c = new EmergencyContact();
+        c.setUserId(userId);
         c.setName(name.trim());
         c.setRelationship(relationship.trim());
         c.setPhone(phone.trim());
@@ -51,11 +50,11 @@ public class EmergencyContactService {
         return repo.save(c);
     }
 
-    public Optional<PhotoContact> updateContact(String id, String name, String relationship, String phone, MultipartFile photo) throws IOException {
-        Optional<PhotoContact> existingOpt = repo.findById(id);
+    public Optional<EmergencyContact> updateContact(String id, String name, String relationship, String phone, MultipartFile photo) throws IOException {
+        Optional<EmergencyContact> existingOpt = repo.findById(id);
         if (existingOpt.isEmpty()) return Optional.empty();
 
-        PhotoContact c = existingOpt.get();
+        EmergencyContact c = existingOpt.get();
         if (name != null) c.setName(name.trim());
         if (relationship != null) c.setRelationship(relationship.trim());
         if (phone != null) c.setPhone(phone.trim());
@@ -71,12 +70,20 @@ public class EmergencyContactService {
         return Optional.of(repo.save(c));
     }
 
-    public Page<PhotoContact> getContacts(int page, int size, String q) {
+    public Page<EmergencyContact> getContacts(int page, int size, String q) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt")));
         if (q == null || q.trim().isEmpty()) return repo.findAll(pageable);
 
         String regex = "(?i).*" + q.trim() + ".*";
         return repo.findByNameRegexOrRelationshipRegexOrPhoneRegex(regex, regex, regex, pageable);
+    }
+
+    public Page<EmergencyContact> getContactsByUser(String userId, int page, int size, String q) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        if (q == null || q.isBlank()) {
+            return repo.findByUserId(userId, pageable);
+        }
+        return repo.findByUserIdAndNameContainingIgnoreCase(userId, q, pageable);
     }
 
     public Optional<GridFsResource> getPhotoResource(String fileId) {
