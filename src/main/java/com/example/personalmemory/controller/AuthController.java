@@ -18,11 +18,13 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody Map<String, String> body) {
+    public ResponseEntity<?> register(@RequestBody Map<String, Object> body) {
         try {
-            String username = body.get("username");
-            String password = body.get("password");
-            User user = authService.register(username, password);
+            String username = (String) body.get("username");
+            String password = (String) body.get("password");
+            boolean isAlzheimer = (boolean) body.get("isAlzheimer");
+
+            User user = authService.register(username, password, isAlzheimer);
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Account created successfully!",
@@ -43,6 +45,7 @@ public class AuthController {
                     "success", true,
                     "message", "Login successful!",
                     "userId", user.getId(),
+                    "username", user.getUsername(), // Return username on login
                     "quickQuestionAnswered", user.isQuickQuestionAnswered()
             ));
         } else {
@@ -63,19 +66,23 @@ public class AuthController {
     }
 
     @PostMapping("/login-face")
-    public ResponseEntity<?> loginWithFace(@RequestParam("face") MultipartFile faceImage) {
+    public ResponseEntity<?> loginWithFace(
+            @RequestParam("face") MultipartFile faceImage,
+            @RequestParam("username") String username) { // <-- MODIFIED: Accept username
         try {
-            var userOpt = authService.loginWithFace(faceImage);
+            // Pass both face and username to the service
+            var userOpt = authService.loginWithFace(faceImage, username);
             if (userOpt.isPresent()) {
                 var user = userOpt.get();
                 return ResponseEntity.ok(Map.of(
                         "success", true,
                         "message", "Face login successful",
                         "userId", user.getId(),
+                        "username", user.getUsername(), // Return username on login
                         "quickQuestionAnswered", user.isQuickQuestionAnswered()
                 ));
             } else {
-                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Face not recognized"));
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Face not recognized or does not match the username."));
             }
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));

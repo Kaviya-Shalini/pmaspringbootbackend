@@ -19,9 +19,6 @@ import java.util.*;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-/**
- * AuthService with robust, high-accuracy face recognition (Facenet embeddings + face crop).
- */
 @Service
 public class AuthService {
 
@@ -58,14 +55,13 @@ public class AuthService {
         }
     }
 
-    // ---------------- BASIC AUTH ----------------
-
-    public User register(String username, String password) {
+    public User register(String username, String password, boolean isAlzheimer) {
         if (userRepository.findByUsername(username).isPresent())
             throw new RuntimeException("Username already exists");
 
         String hash = encoder.encode(password);
         User user = new User(username, hash);
+        user.setAlzheimer(isAlzheimer); // Set the Alzheimer status
         try {
             user.setEncryptionKey(encryptionService.generateKey());
         } catch (Exception e) {
@@ -79,8 +75,6 @@ public class AuthService {
                 .filter(user -> encoder.matches(password, user.getPasswordHash()));
     }
 
-    // ---------------- FACE REGISTRATION ----------------
-
     public void registerFace(String userId, MultipartFile faceImage) throws IOException {
         Optional<User> userOpt = userRepository.findById(userId);
         if (userOpt.isEmpty()) throw new RuntimeException("User not found");
@@ -93,7 +87,6 @@ public class AuthService {
         Path path = Paths.get(filePath);
         Files.write(path, faceImage.getBytes());
 
-        // Detect and crop face
         Mat img = opencv_imgcodecs.imread(filePath);
         Mat face = cropFace(img);
         if (face == null) throw new RuntimeException("No clear face detected during registration.");
@@ -106,9 +99,16 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    // ---------------- FACE LOGIN ----------------
+    // MODIFIED: Method now accepts username to perform a targeted check
+    public Optional<User> loginWithFace(MultipartFile faceImage, String username) throws IOException {
+        // Step 1: Find the user by username first. If not found, fail immediately.
+        Optional<User> targetUserOpt = userRepository.findByUsername(username);
+        if (targetUserOpt.isEmpty() || targetUserOpt.get().getFaceEmbedding() == null) {
+            return Optional.empty(); // User doesn't exist or has no registered face
+        }
+        User targetUser = targetUserOpt.get();
 
-    public Optional<User> loginWithFace(MultipartFile faceImage) throws IOException {
+        // Step 2: Process the incoming face image
         File tempFile = File.createTempFile("face-login", ".jpg");
         faceImage.transferTo(tempFile);
 
@@ -116,35 +116,22 @@ public class AuthService {
         tempFile.delete();
 
         Mat face = cropFace(img);
-        if (face == null) return Optional.empty();
+        if (face == null) return Optional.empty(); // No face detected in the login attempt
 
         float[] loginEmbedding = extractFaceEmbedding(face);
-        if (loginEmbedding == null) return Optional.empty();
+        if (loginEmbedding == null) return Optional.empty(); // Could not process face
 
-        List<User> users = userRepository.findAll().stream()
-                .filter(u -> u.getFaceEmbedding() != null)
-                .collect(Collectors.toList());
+        // Step 3: Compare the incoming face ONLY with the target user's face
+        float[] storedEmbedding = parseEmbedding(targetUser.getFaceEmbedding());
+        double similarity = cosineSimilarity(loginEmbedding, storedEmbedding);
 
-        double bestScore = 0;
-        User bestUser = null;
-
-        for (User user : users) {
-            float[] storedEmbedding = parseEmbedding(user.getFaceEmbedding());
-            double similarity = cosineSimilarity(loginEmbedding, storedEmbedding);
-            if (similarity > bestScore) {
-                bestScore = similarity;
-                bestUser = user;
-            }
+        // Step 4: If the similarity is high enough, login is successful
+        if (similarity >= 0.75) {
+            return Optional.of(targetUser);
         }
 
-        // ✅ Lowered threshold to 0.75 for better tolerance to lighting/dress/background
-        if (bestUser != null && bestScore >= 0.75) {
-            return Optional.of(bestUser);
-        }
-        return Optional.empty();
+        return Optional.empty(); // Faces do not match
     }
-
-    // ---------------- FACE UTILS ----------------
 
     private Mat cropFace(Mat img) {
         if (img == null || img.empty()) return null;
@@ -156,7 +143,6 @@ public class AuthService {
         Rect faceRect = faces.get(0);
         Mat face = new Mat(img, faceRect).clone();
 
-        // Resize to 160x160 for Facenet input
         Mat resized = new Mat();
         opencv_imgproc.resize(face, resized, new Size(160, 160));
 
@@ -212,8 +198,6 @@ public class AuthService {
         }
         return dot / (Math.sqrt(normA) * Math.sqrt(normB));
     }
-
-    // ---------------- DELETE USER ----------------
 
     public boolean deleteUser(String userId) {
         if (!userRepository.existsById(userId)) return false;
