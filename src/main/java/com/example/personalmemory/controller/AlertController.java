@@ -1,30 +1,47 @@
 package com.example.personalmemory.controller;
 
 import com.example.personalmemory.model.Alert;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api/alerts")
 public class AlertController {
 
-    private final SimpMessagingTemplate messagingTemplate;
+    // Map of userId (family member) → alerts list
+    private final Map<String, List<Alert>> familyAlerts = new ConcurrentHashMap<>();
 
-    @Autowired
-    public AlertController(SimpMessagingTemplate messagingTemplate) {
-        this.messagingTemplate = messagingTemplate;
+    // Example mapping of patient → connected family
+    private final Map<String, List<String>> familyConnections = new HashMap<>();
+
+    public AlertController() {
+        // Example mapping; replace with DB later
+        familyConnections.put("patient1", Arrays.asList("family1", "family2"));
+        familyConnections.put("patient2", Collections.singletonList("family3"));
     }
 
     @PostMapping("/danger")
-    public ResponseEntity<?> danger(@RequestBody Alert alert) {
-        // In a real application, you would process this alert (e.g., send a notification)
-        System.out.println("Received DANGER alert for patient: " + alert.getPatientId() + " at lat: " + alert.getLatitude());
+    public ResponseEntity<String> createAlert(@RequestBody Alert alert) {
+        alert.setTimestamp(Instant.now());
+        String patientId = alert.getPatientId();
 
-        // Send the alert to the WebSocket topic so the dashboard can receive it
-        messagingTemplate.convertAndSend("/topic/alerts", alert);
+        // Send to all connected family members
+        List<String> connectedFamily = familyConnections.getOrDefault(patientId, new ArrayList<>());
+        for (String familyId : connectedFamily) {
+            familyAlerts.computeIfAbsent(familyId, k -> new ArrayList<>()).add(alert);
+        }
+        return ResponseEntity.ok("Alert sent to family of patient: " + patientId);
+    }
 
-        return ResponseEntity.ok().build();
+    @GetMapping("/{userId}")
+    public ResponseEntity<List<Alert>> getAlertsForUser(@PathVariable String userId) {
+        List<Alert> alerts = familyAlerts.getOrDefault(userId, new ArrayList<>());
+        // After fetching, clear so the same alert won’t show again
+        familyAlerts.remove(userId);
+        return ResponseEntity.ok(alerts);
     }
 }
