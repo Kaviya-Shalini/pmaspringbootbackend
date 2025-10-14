@@ -3,38 +3,41 @@ package com.example.personalmemory.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.Date;
-
-@Document(collection = "family_connections")
+@Document(collection = "familyConnections")
 public class FamilyConnection {
     @Id
     private String id;
+    private String patientId; // The ID of the patient user
+    private String familyMemberId; // The ID of the family member user
 
-    // owner userId (the account owner whose memories are shared)
-    private String userId;
-
-    // username of connected family member (their account username)
-    private String familyUsername;
-
-    private Date connectedAt = new Date();
-
-    public FamilyConnection() {}
-    public FamilyConnection(String userId, String familyUsername) {
-        this.userId = userId;
-        this.familyUsername = familyUsername;
-        this.connectedAt = new Date();
+    public FamilyConnection(String patientId, String familyMemberId) {
+        this.patientId = patientId;
+        this.familyMemberId = familyMemberId;
     }
 
-    // getters/setters
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    // --- Getters and Setters ---
+    public String getId() {
+        return id;
+    }
 
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
+    public void setId(String id) {
+        this.id = id;
+    }
 
-    public String getFamilyUsername() { return familyUsername; }
-    public void setFamilyUsername(String familyUsername) { this.familyUsername = familyUsername; }
+    public String getPatientId() {
+        return patientId;
+    }
 
-    public Date getConnectedAt() { return connectedAt; }
-    public void setConnectedAt(Date connectedAt) { this.connectedAt = connectedAt; }
+    public void setPatientId(String patientId) {
+        this.patientId = patientId;
+    }
+
+    public String getFamilyMemberId() {
+        return familyMemberId;
+    }
+
+    public void setFamilyMemberId(String familyMemberId) {
+        this.familyMemberId = familyMemberId;
+    }
 }
+
