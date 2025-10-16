@@ -29,4 +29,5 @@ public interface MemoryRepository extends MongoRepository<Addmemory, String> {
     @Query("{'userId': ?0, 'isAlzheimer': ?1, '$or': [{'title': {$regex: ?2, $options: 'i'}}, {'description': {$regex: ?2, $options: 'i'}}, {'category': {$regex: ?2, $options: 'i'}}, {'customCategory': {$regex: ?2, $options: 'i'}}]}")
     Page<Addmemory> findByUserIdAndIsAlzheimerAndSearchTerm(String userId, boolean isAlzheimer, String searchTerm, Pageable pageable);
     void deleteByUserId(String userId);
+
 }
