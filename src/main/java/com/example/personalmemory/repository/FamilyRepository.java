@@ -16,5 +16,6 @@ public interface FamilyRepository extends MongoRepository<FamilyConnection, Stri
     void deleteByUserId(String userId);
     @Transactional
     void deleteByPatientIdAndFamilyMemberId(String patientId, String familyMemberId);
+    void deleteByTargetUserId(String targetUserId);
 }
 

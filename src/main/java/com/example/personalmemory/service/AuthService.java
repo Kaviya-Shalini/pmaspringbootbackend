@@ -33,7 +33,7 @@ public class AuthService {
     @Autowired private EmergencyContactRepository emergencyContactRepository;
     @Autowired private ChatRepository chatRepository;
     @Autowired private AlertRepository alertRepository;
-
+    @Autowired private CleanupService cleanupService;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
     private final String UPLOAD_DIR = "./uploads/faces/";
 
@@ -202,6 +202,7 @@ public class AuthService {
     public boolean deleteUser(String userId) {
         if (!userRepository.existsById(userId)) return false;
 
+        // 1. DELETE USER-SPECIFIC DATA (Database Records)
         memoryRepository.deleteByUserId(userId);
         emergencyContactRepository.deleteByUserId(userId);
         photoContactRepository.deleteByUserId(userId);
@@ -210,7 +211,20 @@ public class AuthService {
         familyMemberRepository.deleteByUserId(userId);
         alertRepository.deleteByUserId(userId);
         chatRepository.deleteByUserId(userId);
+        // familyRepository.deleteByUserId(userId); // Assuming Family is tied to familyMember/connections
+
+        // 2. DELETE FILES (Local Server Storage & GridFS)
+        cleanupService.deleteUserFilesAndGridFS(userId); // <--- CALL CLEANUP SERVICE
+
+        // 3. DELETE CROSS-REFERENCE DATA (Family Connections)
+        // Delete all FamilyConnection records where this user is the *connected* person (targetId).
+        // This ensures other users' connections to the deleted user are also cleaned up.
+        // Assuming your FamilyConnection model has a 'targetId' field representing the connected user's ID.
+        familyRepository.deleteByTargetUserId(userId); // <-- Add this method to FamilyRepository
+
+        // 4. DELETE USER RECORD (Last step)
         userRepository.deleteById(userId);
+
         return true;
     }
 }
