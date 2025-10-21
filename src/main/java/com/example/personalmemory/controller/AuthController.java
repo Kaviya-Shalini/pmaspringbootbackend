@@ -89,7 +89,7 @@ public class AuthController {
         }
     }
 
-    @DeleteMapping("/user/{userId}")
+    @DeleteMapping("/user/delete/{userId}") // <-- Final endpoint structure
     public ResponseEntity<?> deleteAccount(@PathVariable String userId) {
         boolean deleted = authService.deleteUser(userId);
         if (deleted)
