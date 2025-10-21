@@ -9,7 +9,7 @@ public class FamilyConnection {
     private String id;
     private String patientId; // The ID of the patient user
     private String familyMemberId; // The ID of the family member user
-
+    private String userId;
     public FamilyConnection(String patientId, String familyMemberId) {
         this.patientId = patientId;
         this.familyMemberId = familyMemberId;
@@ -27,6 +27,8 @@ public class FamilyConnection {
     public String getPatientId() {
         return patientId;
     }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
 
     public void setPatientId(String patientId) {
         this.patientId = patientId;
