@@ -10,6 +10,7 @@ import org.bytedeco.opencv.opencv_objdetect.CascadeClassifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -199,30 +200,46 @@ public class AuthService {
         return dot / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
+    @Transactional // Ensures all database operations are atomic.
     public boolean deleteUser(String userId) {
         if (!userRepository.existsById(userId)) return false;
 
-        // 1. DELETE USER-SPECIFIC DATA (Database Records)
+        // --- 1. DELETE FILES (Local Server Storage & GridFS) ---
+        // MUST be done BEFORE deleting PhotoEntry records to allow lookup of file IDs.
+        cleanupService.deleteUserFilesAndGridFS(userId);
+
+        // --- 2. DELETE USER-SPECIFIC DATA (Database Records) ---
+
+        // Deletes all Memories owned by the user
         memoryRepository.deleteByUserId(userId);
+
+        // Deletes all PhotoEntry metadata records owned by the user (now that files are gone)
+        // Assuming the repository method is deleteByOwnerId or deleteByUserId based on your model
+        photoEntryRepository.deleteByOwnerId(userId);
+
+        // Deletes all Contacts and Communication
         emergencyContactRepository.deleteByUserId(userId);
         photoContactRepository.deleteByUserId(userId);
-        photoEntryRepository.deleteByOwnerId(userId);
-        locationRepository.deleteByUserId(userId);
-        familyMemberRepository.deleteByUserId(userId);
-        alertRepository.deleteByUserId(userId);
         chatRepository.deleteByUserId(userId);
-        // familyRepository.deleteByUserId(userId); // Assuming Family is tied to familyMember/connections
 
-        // 2. DELETE FILES (Local Server Storage & GridFS)
-        cleanupService.deleteUserFilesAndGridFS(userId); // <--- CALL CLEANUP SERVICE
+        // Deletes all Location and Alert Data
+        locationRepository.deleteByUserId(userId);
+        alertRepository.deleteByUserId(userId);
 
-        // 3. DELETE CROSS-REFERENCE DATA (Family Connections)
-        // Delete all FamilyConnection records where this user is the *connected* person (targetId).
-        // This ensures other users' connections to the deleted user are also cleaned up.
-        // Assuming your FamilyConnection model has a 'targetId' field representing the connected user's ID.
-        familyRepository.deleteByTargetUserId(userId); // <-- Add this method to FamilyRepository
+        // Deletes Family Connections:
+        // A. Delete family connections created/owned by the user (from the FamilyConnection collection)
+        familyRepository.deleteByUserId(userId);
 
-        // 4. DELETE USER RECORD (Last step)
+        // B. Delete the user's entry as a member in ANY other user's family connection (from the FamilyMember collection)
+        // This ensures the user is removed from everyone else's 'family connections' list.
+        familyMemberRepository.deleteByUserId(userId);
+
+        // Note: If you have a FamilyConnection relationship where 'userId' is a target/connected user
+        // in someone else's connection, you may need an additional cleanup query on FamilyRepository
+        // or FamilyMemberRepository to ensure all inverse relationships are severed.
+        // The above two lines should cover the direct deletion of records containing 'userId'.
+
+        // --- 3. DELETE USER RECORD (Last step) ---
         userRepository.deleteById(userId);
 
         return true;

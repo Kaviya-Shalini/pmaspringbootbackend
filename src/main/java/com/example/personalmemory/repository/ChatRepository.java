@@ -10,7 +10,7 @@ import java.util.List;
 @Repository
 public interface ChatRepository extends MongoRepository<ChatMessage, String> {
     List<ChatMessage> findByToUserAndDeletedFalseOrderByCreatedAtAsc(String toUser);
-
+    void deleteAllByUserId(String userId);
     void deleteByUserId(String userId);
     // Get only unread + not deleted messages for user
     List<ChatMessage> findByToUserAndDeletedFalseAndReadFalseOrderByCreatedAtAsc(String toUser);

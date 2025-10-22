@@ -22,10 +22,10 @@ public class CleanupService {
     private static final Logger logger = LoggerFactory.getLogger(CleanupService.class);
 
     @Autowired
-    private PhotoEntryRepository photoEntryRepository; // Used to find database records pointing to files
+    private PhotoEntryRepository photoEntryRepository;
 
     @Autowired
-    private GridFsTemplate gridFsTemplate; // For deleting from fs.files and fs.chunks
+    private GridFsTemplate gridFsTemplate;
 
     // Assuming local storage structure is:
     // 1. Files uploaded with file path in PhotoEntry (e.g., ./uploads/uuid.encrypted)
@@ -42,23 +42,24 @@ public class CleanupService {
         logger.info("Starting file and GridFS cleanup for user: {}", userId);
 
         // --- 1. CLEANUP FILES REFERENCED BY PhotoEntry (GridFS and Local Encrypted Files) ---
-        List<PhotoEntry> photoEntries = photoEntryRepository.findByUserId(userId); // Fetch entries by userId
+        // Assuming PhotoEntry has a field 'userId' that links to the owner.
+        List<PhotoEntry> photoEntries = photoEntryRepository.findByUserId(userId);
 
         for (PhotoEntry entry : photoEntries) {
             // A. Delete Files from MongoDB GridFS (fs.files and fs.chunks)
-            if (entry.getPhotoFileId() != null) {
+            // 'getPhotoFileId' is assumed to return the String representation of the GridFS ObjectId
+            if (entry.getPhotoFileId() != null && !entry.getPhotoFileId().startsWith(UPLOAD_DIR)) {
                 try {
-                    // FIX: Delete by GridFS file ObjectId (_id) using PhotoFileId
                     Query fileQuery = Query.query(Criteria.where("_id").is(new ObjectId(entry.getPhotoFileId())));
                     gridFsTemplate.delete(fileQuery);
-                    logger.debug("Deleted GridFS file (ID: {}): {}", entry.getPhotoFileId(), entry.getCaption());
+                    logger.debug("Deleted GridFS file (ID: {}).", entry.getPhotoFileId());
                 } catch (Exception e) {
+                    // Log as warning, but continue deletion process for other files/records
                     logger.warn("Failed to delete GridFS file (ID: {}): {}", entry.getPhotoFileId(), e.getMessage());
                 }
             }
 
-            // B. Delete Encrypted files from local server storage
-            // This handles generic encrypted files and potentially voice notes/documents
+            // B. Delete Encrypted files from local server storage (files in ./uploads/)
             if (entry.getPhotoFileId() != null && entry.getPhotoFileId().startsWith(UPLOAD_DIR)) {
                 Path filePath = Paths.get(entry.getPhotoFileId());
                 try {
@@ -70,8 +71,8 @@ public class CleanupService {
             }
         }
 
-        // --- 2. DELETE REGISTERED FACE IMAGE (Local Server File) ---
-        Path faceFilePath = Paths.get(FACE_UPLOAD_DIR + userId + ".jpg"); // Registered face image path
+        // --- 2. DELETE REGISTERED FACE IMAGE (Local Server File: ./uploads/faces/) ---
+        Path faceFilePath = Paths.get(FACE_UPLOAD_DIR + userId + ".jpg");
         try {
             Files.deleteIfExists(faceFilePath);
             logger.info("Deleted registered face image for user: {}", userId);

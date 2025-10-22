@@ -10,11 +10,17 @@ public class FamilyConnection {
     private String patientId; // The ID of the patient user
     private String familyMemberId; // The ID of the family member user
     private String userId;
+    private String targetId; // <--- This MUST exist in the model
+
+
+
     public FamilyConnection(String patientId, String familyMemberId) {
         this.patientId = patientId;
         this.familyMemberId = familyMemberId;
     }
-
+    // Getters/Setters for targetId
+    public String getTargetId() { return targetId; }
+    public void setTargetId(String targetId) { this.targetId = targetId; }
     // --- Getters and Setters ---
     public String getId() {
         return id;

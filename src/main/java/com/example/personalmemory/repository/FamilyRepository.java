@@ -13,9 +13,12 @@ public interface FamilyRepository extends MongoRepository<FamilyConnection, Stri
     List<FamilyConnection> findByFamilyMemberId(String familyMemberId);
 
     boolean existsByPatientIdAndFamilyMemberId(String patientId, String familyMemberId);
+
     void deleteByUserId(String userId);
+
     @Transactional
     void deleteByPatientIdAndFamilyMemberId(String patientId, String familyMemberId);
-    void deleteByTargetUserId(String targetUserId);
-}
 
+    // FIX: Changed from deleteByTargetUserId to deleteByTargetId to match the model field
+    void deleteByTargetId(String targetId);
+}
