@@ -18,6 +18,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -221,24 +223,39 @@ public class MemoryService {
         return memoryRepository.findDueAndUndeliveredReminders(new Date());
     }
 
-    // ✅ NEW - Mark as read/handled
     public Addmemory markReminderAsRead(String memoryId) {
-        Addmemory memory = memoryRepository.findById(memoryId).orElseThrow(() ->
-                new ResourceNotFoundException("Memory not found with id: " + memoryId));
+        Addmemory memory = memoryRepository.findById(memoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Memory not found with id: " + memoryId));
 
-        memory.setReminderDelivered(true); // Mark as handled for this cycle
+        // ✅ Mark as read
+        memory.setReminderRead(true);
+        memory.setReminderDelivered(true); // also mark delivered so it won't resend
 
-        // Handle daily reminders: set next reminder time
+        // ✅ Handle daily reminders
         if (memory.isReminderDaily()) {
-            long oneDayInMillis = 24 * 60 * 60 * 1000;
-            Date nextReminder = new Date(memory.getReminderAt().getTime() + oneDayInMillis);
+            LocalDateTime currentReminderTime = memory.getReminderAt()
+                    .toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDateTime();
+
+            LocalDateTime nextReminderTime = currentReminderTime.plusDays(1);
+            Date nextReminder = Date.from(nextReminderTime.atZone(ZoneId.systemDefault()).toInstant());
 
             memory.setReminderAt(nextReminder);
-            // Reset delivered flag for the next day's reminder
+            memory.setReminderRead(false); // reset for next cycle
             memory.setReminderDelivered(false);
         }
 
+        memory.setUpdatedAt(new Date());
         return memoryRepository.save(memory);
     }
+
+    public List<Addmemory> getDueAndUnreadRemindersByUserId(String userId) {
+        // ASSUMPTION: The repository has a method to handle the complex query.
+        // This method fetches reminders that are due AND reminderDelivered = false.
+        // We modify the existing method's intent slightly to filter by user.
+        return memoryRepository.findDueAndUndeliveredRemindersByUserId(userId, new Date());
+    }
+
 
 }

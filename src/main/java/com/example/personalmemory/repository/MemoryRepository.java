@@ -30,6 +30,10 @@ public interface MemoryRepository extends MongoRepository<Addmemory, String> {
     @Query("{'userId': ?0, 'isAlzheimer': ?1, '$or': [{'title': {$regex: ?2, $options: 'i'}}, {'description': {$regex: ?2, $options: 'i'}}, {'category': {$regex: ?2, $options: 'i'}}, {'customCategory': {$regex: ?2, $options: 'i'}}]}")
     Page<Addmemory> findByUserIdAndIsAlzheimerAndSearchTerm(String userId, boolean isAlzheimer, String searchTerm, Pageable pageable);
     void deleteByUserId(String userId);
-    @Query("{'reminderAt': {'$lte': ?0}, 'reminderDelivered': false}")
+    @Query("{ 'reminderAt': { $lte: ?0 }, 'reminderDelivered': false, 'reminderRead': false }")
     List<Addmemory> findDueAndUndeliveredReminders(Date now);
+
+    @Query("{ 'userId': ?0, 'reminderAt': { $lte: ?1 }, 'reminderDelivered': false, 'reminderRead': false }")
+    List<Addmemory> findDueAndUndeliveredRemindersByUserId(String userId, Date now);
+
 }

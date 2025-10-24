@@ -40,6 +40,10 @@ public class Addmemory {
     @LastModifiedDate
     private Date updatedAt;
     private boolean reminderDelivered;
+    private boolean reminderRead = false;  // 👈 add this
+
+    public boolean isReminderRead() { return reminderRead; }
+    public void setReminderRead(boolean reminderRead) { this.reminderRead = reminderRead; }
     public Addmemory() {}
 
     // getters & setters (generated)

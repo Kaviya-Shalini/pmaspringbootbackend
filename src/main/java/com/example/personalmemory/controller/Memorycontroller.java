@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -159,6 +160,13 @@ public class Memorycontroller {
                 "totalElements", memories.getTotalElements()
         ));
     }
+    @GetMapping("/memories/reminders/due/{userId}")
+    public ResponseEntity<List<Addmemory>> getDueAndUnreadReminders(@PathVariable String userId) {
+        // We call the service method that fetches reminders currently due
+        List<Addmemory> dueReminders = memoryService.getDueAndUnreadRemindersByUserId(userId);
+        return ResponseEntity.ok(dueReminders);
+    }
+
     @PatchMapping("/memories/{memoryId}/mark-read")
     public ResponseEntity<?> markReminderAsRead(@PathVariable String memoryId) {
         try {

@@ -9,9 +9,13 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        // Explicitly list allowed origins for security and compatibility
+        String[] allowedOrigins = {"http://localhost:4200", "http://127.0.0.1:4200"};
+
         registry.addMapping("/api/**") // Apply to all API endpoints
-                .allowedOrigins("http://localhost:4200")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Explicitly allow PUT and OPTIONS
+                .allowedOrigins(allowedOrigins)
+                // Added PATCH method, used by markAsRead API
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
     }
