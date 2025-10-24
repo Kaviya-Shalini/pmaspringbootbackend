@@ -39,7 +39,7 @@ public class Addmemory {
 
     @LastModifiedDate
     private Date updatedAt;
-
+    private boolean reminderDelivered;
     public Addmemory() {}
 
     // getters & setters (generated)
@@ -48,7 +48,8 @@ public class Addmemory {
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
-
+    public boolean isReminderDelivered() { return reminderDelivered; }
+    public void setReminderDelivered(boolean reminderDelivered) { this.reminderDelivered = reminderDelivered; }
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
 

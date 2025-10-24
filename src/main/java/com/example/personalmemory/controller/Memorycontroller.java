@@ -159,5 +159,21 @@ public class Memorycontroller {
                 "totalElements", memories.getTotalElements()
         ));
     }
+    @PatchMapping("/memories/{memoryId}/mark-read")
+    public ResponseEntity<?> markReminderAsRead(@PathVariable String memoryId) {
+        try {
+            Addmemory updatedMemory = memoryService.markReminderAsRead(memoryId);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Memory reminder marked as read!",
+                    "data", updatedMemory
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
 
 }

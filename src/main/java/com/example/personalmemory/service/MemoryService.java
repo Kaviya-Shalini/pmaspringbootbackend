@@ -31,7 +31,8 @@ public class MemoryService {
     private MemoryRepository memoryRepository;
     @Autowired
     private EncryptionService encryptionService;
-
+    @Autowired
+    private NotificationService notificationService; // Inject to use the new method
     @Value("${file.upload-dir}")
     private String uploadDir;
 
@@ -210,6 +211,34 @@ public class MemoryService {
         }
     }
 
+    public Addmemory saveMemory(Addmemory memory) {
+        memory.setUpdatedAt(new Date());
+        return memoryRepository.save(memory);
+    }
 
+    // ✅ NEW - Get due reminders
+    public List<Addmemory> getDueReminders() {
+        return memoryRepository.findDueAndUndeliveredReminders(new Date());
+    }
+
+    // ✅ NEW - Mark as read/handled
+    public Addmemory markReminderAsRead(String memoryId) {
+        Addmemory memory = memoryRepository.findById(memoryId).orElseThrow(() ->
+                new ResourceNotFoundException("Memory not found with id: " + memoryId));
+
+        memory.setReminderDelivered(true); // Mark as handled for this cycle
+
+        // Handle daily reminders: set next reminder time
+        if (memory.isReminderDaily()) {
+            long oneDayInMillis = 24 * 60 * 60 * 1000;
+            Date nextReminder = new Date(memory.getReminderAt().getTime() + oneDayInMillis);
+
+            memory.setReminderAt(nextReminder);
+            // Reset delivered flag for the next day's reminder
+            memory.setReminderDelivered(false);
+        }
+
+        return memoryRepository.save(memory);
+    }
 
 }
