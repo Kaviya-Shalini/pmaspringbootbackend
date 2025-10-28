@@ -16,8 +16,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/alerts")
 public class AlertController {
 
-    // Removed the unreliable 'familyAlerts' map.
-    // NEW: Map to track ACTIVE danger alerts that need to persist until resolution.
+
     // Key: PatientId, Value: The active Alert object
     private static final Map<String, Alert> activeDangerAlerts = new ConcurrentHashMap<>();
 
