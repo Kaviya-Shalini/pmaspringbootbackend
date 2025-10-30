@@ -3,6 +3,7 @@ package com.example.personalmemory.service;
 import com.example.personalmemory.model.Addmemory;
 import com.example.personalmemory.model.Alert;
 import com.example.personalmemory.model.FamilyMember;
+import com.example.personalmemory.model.Routine;
 import com.example.personalmemory.repository.FamilyMemberRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,7 +20,8 @@ public class NotificationService {
     private final FamilyMemberRepository familyRepo;
     private final SimpMessagingTemplate simp;
     private final RestTemplate rest = new RestTemplate();
-    
+    @Autowired
+    private FamilyService familyService;
 
     // FCM server key if you want to enable FCM push notifications
     @Value("${app.fcm.serverKey:}")
@@ -97,4 +99,24 @@ public class NotificationService {
             // Handle error (e.g., log it)
         }
     }
+    public void sendRoutineNotification(Routine routine) {
+        String patientId = routine.getPatientId();
+
+        // Notify the patient
+        simp.convertAndSend(
+                "/topic/notifications/" + patientId,
+                "📅 Your family has updated your routine. Tap to view Routine Tracker."
+        );
+
+        // Notify connected family members
+        List<String> familyMemberIds = familyService.getFamilyMembersByPatientId(patientId);
+        for (String familyMemberId : familyMemberIds) {
+            simp.convertAndSend(
+                    "/topic/notifications/" + familyMemberId,
+                    "🧩 A new routine was added for your connected patient."
+            );
+        }
+    }
+
+
 }
