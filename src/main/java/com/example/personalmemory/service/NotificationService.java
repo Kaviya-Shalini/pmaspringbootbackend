@@ -5,12 +5,15 @@ import com.example.personalmemory.model.Alert;
 import com.example.personalmemory.model.FamilyMember;
 import com.example.personalmemory.model.Routine;
 import com.example.personalmemory.repository.FamilyMemberRepository;
+import com.example.personalmemory.repository.RoutineRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 
@@ -22,6 +25,8 @@ public class NotificationService {
     private final RestTemplate rest = new RestTemplate();
     @Autowired
     private FamilyService familyService;
+    @Autowired
+    private RoutineRepository routineRepository;
 
     // FCM server key if you want to enable FCM push notifications
     @Value("${app.fcm.serverKey:}")
@@ -77,6 +82,16 @@ public class NotificationService {
 
         // Additional channels (email/SMS) can be wired here.
     }
+    @Scheduled(cron = "0 * * * * *") // Every minute
+    public void sendScheduledReminders() {
+        String currentTime = LocalTime.now().withSecond(0).toString().substring(0,5); // "HH:mm"
+        List<Routine> routines = routineRepository.findByTimeOfDayAndActiveTrue(currentTime);
+
+        for (Routine r : routines) {
+            // Send reminder to the Alzheimer patient
+            sendRoutineNotification(r);
+        }
+    }
     public void sendReminderNotification(Addmemory memory) {
         // We will use a unique topic for memory reminders
         String destination = "/topic/reminders/" + memory.getUserId();
@@ -108,14 +123,19 @@ public class NotificationService {
                 "📅 Your family has updated your routine. Tap to view Routine Tracker."
         );
 
+
         // Notify connected family members
         List<String> familyMemberIds = familyService.getFamilyMembersByPatientId(patientId);
         for (String familyMemberId : familyMemberIds) {
-            simp.convertAndSend(
-                    "/topic/notifications/" + familyMemberId,
-                    "🧩 A new routine was added for your connected patient."
-            );
+//            simp.convertAndSend(
+//                    "/topic/notifications/" + familyMemberId,
+//                    "🧩 A new routine was added for your connected patient."
+//            );
         }
+    }
+    public void sendRoutineResponseNotification(Object response) {
+        // Optional: notify family members about Yes/No answer
+        System.out.println("💬 New routine response recorded: " + response);
     }
 
 

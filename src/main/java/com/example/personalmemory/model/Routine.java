@@ -1,6 +1,7 @@
 package com.example.personalmemory.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalTime;
@@ -15,6 +16,16 @@ public class Routine {
     private String timeOfDay;        // store as "HH:mm" e.g. "09:00"
     private boolean repeatDaily;     // true/false
     private boolean active = true;
+    @Transient
+    private RoutineResponse latestResponse;
+
+    public RoutineResponse getLatestResponse() {
+        return latestResponse;
+    }
+
+    public void setLatestResponse(RoutineResponse latestResponse) {
+        this.latestResponse = latestResponse;
+    }
 
     public Routine() {}
 

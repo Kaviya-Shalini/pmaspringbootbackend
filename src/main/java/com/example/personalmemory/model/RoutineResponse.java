@@ -1,6 +1,7 @@
 package com.example.personalmemory.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -14,6 +15,7 @@ public class RoutineResponse {
     private String answer; // "yes" or "no"
     private Instant answeredAt; // timestamp of click
     private String createdBy; // family member who created the routine (helpful)
+
 
     public RoutineResponse() {}
 

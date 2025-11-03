@@ -1,10 +1,12 @@
 package com.example.personalmemory.controller;
 
 import com.example.personalmemory.model.Routine;
+import com.example.personalmemory.model.RoutineResponse;
 import com.example.personalmemory.model.User;
 import com.example.personalmemory.repository.UserRepository;
 import com.example.personalmemory.service.FamilyService;
 import com.example.personalmemory.service.NotificationService;
+import com.example.personalmemory.service.RoutineResponseService;
 import com.example.personalmemory.service.RoutineService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +30,8 @@ public class RoutineController {
     private FamilyService familyService;
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    private RoutineResponseService routineResponseService;
 
     // Create a routine (only family member connected to patient can)
     @PostMapping("/create")
@@ -58,6 +62,14 @@ public class RoutineController {
 
         Routine r = new Routine(patientId, createdBy, question, timeOfDay, repeatDaily);
         Routine saved = routineService.createRoutine(r);
+
+        // 💡 FIX 1: Add the notification call here after successfully saving the routine
+        try {
+//            notificationService.sendRoutineNotification(saved);
+        } catch (Exception e) {
+            e.printStackTrace(); // Log the error but don't fail the API call
+        }
+
         return ResponseEntity.ok(Map.of("success", true, "data", saved));
     }
     @GetMapping("/family/{familyMemberId}")
@@ -81,8 +93,15 @@ public class RoutineController {
     // list routines for patient (for both patient and family member views)
     @GetMapping("/forPatient/{patientId}")
     public ResponseEntity<?> getForPatient(@PathVariable String patientId) {
-        List<Routine> list = routineService.getRoutinesForPatient(patientId);
-        return ResponseEntity.ok(list);
+        List<Routine> routines = routineService.getRoutinesForPatient(patientId);
+
+        // For each routine, attach the latest response
+        routines.forEach(r -> {
+            RoutineResponse latest = routineResponseService.getLatestByRoutineId(r.getId());
+            r.setLatestResponse(latest);
+        });
+
+        return ResponseEntity.ok(routines);
     }
 
     @DeleteMapping("/{routineId}")

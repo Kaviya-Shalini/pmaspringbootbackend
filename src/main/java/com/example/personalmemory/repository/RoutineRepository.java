@@ -9,5 +9,6 @@ public interface RoutineRepository extends MongoRepository<Routine, String> {
     List<Routine> findByPatientIdAndActiveTrue(String patientId);
     List<Routine> findAllByActiveTrue();
     List<Routine> findByCreatedBy(String createdBy);
+    List<Routine> findByTimeOfDayAndActiveTrue(String timeOfDay);
 
 }
